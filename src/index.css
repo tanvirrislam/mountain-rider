@@ -1,0 +1,287 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.4;
+  color: #fff;
+  background-color: #111;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game-container {
+  width: 100%;
+  height: 100%;
+}
+
+#game-container canvas {
+  display: block;
+}
+
+/* ═══════════════════ HUD OVERLAY ═══════════════════ */
+
+.ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 24px;
+  gap: 12px;
+}
+
+.hud-panel {
+  background: linear-gradient(135deg, rgba(0,0,0,0.55), rgba(0,0,0,0.35));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 10px 22px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 4px 20px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 110px;
+}
+
+.hud-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 2px;
+}
+
+.hud-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.hud-value.distance { color: #69f0ae; }
+.hud-value.timer    { color: #fff; }
+.hud-value.speed    { color: #ffab40; }
+
+/* ═══════════════════ MENU / OVERLAY SCREENS ═══════════════════ */
+
+.menu-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.75) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+  z-index: 20;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.menu-title {
+  font-size: 4.5rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #ff6b6b, #ffa726, #ff7043);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 4px 12px rgba(255,107,107,0.3));
+}
+
+.menu-subtitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 32px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.btn {
+  position: relative;
+  background: linear-gradient(135deg, #ff5252 0%, #ff7043 100%);
+  color: white;
+  border: none;
+  padding: 16px 50px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  box-shadow:
+    0 8px 30px rgba(255,82,82,0.4),
+    0 2px 0 rgba(0,0,0,0.15) inset;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 14px 40px rgba(255,82,82,0.55);
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 4px 15px rgba(255,82,82,0.35);
+}
+
+.btn-green {
+  background: linear-gradient(135deg, #00e676 0%, #69f0ae 100%);
+  box-shadow: 0 8px 30px rgba(0,230,118,0.35);
+}
+
+.btn-green:hover {
+  box-shadow: 0 14px 40px rgba(0,230,118,0.5);
+}
+
+.controls-hint {
+  margin-top: 28px;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.key-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.8);
+  min-width: 36px;
+}
+
+/* ── Result overlay specifics ── */
+
+.result-stats {
+  display: flex;
+  gap: 30px;
+  margin: 20px 0 28px;
+}
+
+.result-stat {
+  text-align: center;
+}
+
+.result-stat .stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.45);
+}
+
+.result-stat .stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.result-stat .stat-value.green  { color: #69f0ae; }
+.result-stat .stat-value.orange { color: #ffab40; }
+.result-stat .stat-value.red    { color: #ff5252; }
+
+/* ── Crash title ── */
+.crash-title {
+  background: linear-gradient(135deg, #ff1744, #ff5252);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 12px rgba(255,23,68,0.4));
+}
+
+.victory-title {
+  background: linear-gradient(135deg, #00e676, #69f0ae, #b2ff59);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 12px rgba(0,230,118,0.4));
+}
+
+/* ── Floating animation for menu buggy icon ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.menu-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ── Pulse ring on btn ── */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(255,82,82,0.5); }
+  70%  { box-shadow: 0 0 0 15px rgba(255,82,82,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,82,82,0); }
+}
+
+.btn-pulse {
+  animation: pulse-ring 2s ease infinite;
+}
