@@ -63,10 +63,10 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ── Mountain silhouettes (far) ──
-    this.drawMountainLayer(COLORS.MOUNTAIN_FAR, 0.08, DEPTH.MOUNTAINS_FAR, 0.5, 100, 280);
+    this.drawMountainLayer(COLORS.MOUNTAIN_FAR, 0.08, DEPTH.MOUNTAINS_FAR, 1, 100, 280);
 
     // ── Mountain silhouettes (near) ──
-    this.drawMountainLayer(COLORS.MOUNTAIN_NEAR, 0.15, DEPTH.MOUNTAINS_NEAR, 0.45, 120, 320);
+    this.drawMountainLayer(COLORS.MOUNTAIN_NEAR, 0.15, DEPTH.MOUNTAINS_NEAR, 2, 120, 320);
 
     // ── Forest silhouette ──
     this.drawForestLayer(w, h);
@@ -81,8 +81,8 @@ export default class GameScene extends Phaser.Scene {
 
     for (let x = -200; x <= totalW; x += 15) {
       const y = baseY + Math.sin(x / 250) * amplitude * 0.7
-                      + Math.sin(x / 100) * amplitude * 0.25
-                      + Math.cos(x / 400) * amplitude * 0.5;
+        + Math.sin(x / 100) * amplitude * 0.25
+        + Math.cos(x / 400) * amplitude * 0.5;
       g.lineTo(x, y);
     }
     g.lineTo(totalW, baseY + amplitude + 200);
