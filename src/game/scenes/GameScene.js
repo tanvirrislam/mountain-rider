@@ -95,26 +95,77 @@ export default class GameScene extends Phaser.Scene {
 
   drawForestLayer(w, h) {
     const totalW = 6000;
+    const baseY = 420;
+
+    // ── Back row of trees (lighter, smaller — creates depth) ──
+    const gBack = this.add.graphics();
+    gBack.setDepth(DEPTH.FOREST - 1);
+    gBack.setScrollFactor(0.17);
+
+    for (let x = 0; x < totalW; x += 55) {
+      const treeH = 30 + Math.random() * 40;
+      const treeW = 28 + Math.random() * 12;
+      const cx = x + Math.random() * 20;
+
+      // Lighter green canopy
+      gBack.fillStyle(0x66bb6a, 1);
+      // Layered triangles for a pine shape
+      gBack.fillTriangle(cx - treeW * 0.5, baseY, cx, baseY - treeH, cx + treeW * 0.5, baseY);
+      gBack.fillTriangle(cx - treeW * 0.35, baseY - treeH * 0.3, cx, baseY - treeH * 1.15, cx + treeW * 0.35, baseY - treeH * 0.3);
+    }
+
+    // ── Main forest layer ──
     const g = this.add.graphics();
     g.setDepth(DEPTH.FOREST);
     g.setScrollFactor(0.2);
 
-    // Dark green tree silhouettes
-    const baseY = 420;
+    for (let x = 0; x < totalW; x += 38) {
+      const treeH = 40 + Math.random() * 55;
+      const treeW = 30 + Math.random() * 16;
+      const cx = x + Math.random() * 15;
 
-    g.fillStyle(0x2e7d32, 0.65);
-    for (let x = 0; x < totalW; x += 45) {
-      const treeH = 35 + Math.random() * 55;
-      g.fillTriangle(
-        x, baseY,
-        x + 22, baseY - treeH,
-        x + 44, baseY
-      );
+      // Trunk
+      g.fillStyle(0x5d4037, 1);
+      g.fillRect(cx - 3, baseY - 8, 6, 12);
+
+      // Main canopy — dark green, 3 layered triangles for pine look
+      g.fillStyle(0x2e7d32, 1);
+      g.fillTriangle(cx - treeW * 0.55, baseY - 4, cx, baseY - treeH * 0.55, cx + treeW * 0.55, baseY - 4);
+      g.fillStyle(0x388e3c, 1);
+      g.fillTriangle(cx - treeW * 0.42, baseY - treeH * 0.3, cx, baseY - treeH * 0.82, cx + treeW * 0.42, baseY - treeH * 0.3);
+      g.fillStyle(0x1b5e20, 1);
+      g.fillTriangle(cx - treeW * 0.28, baseY - treeH * 0.55, cx, baseY - treeH * 1.05, cx + treeW * 0.28, baseY - treeH * 0.55);
+
+      // Light highlight on the left side of top tier
+      g.fillStyle(0x81c784, 0.5);
+      g.fillTriangle(cx - treeW * 0.22, baseY - treeH * 0.58, cx - 2, baseY - treeH * 1.02, cx + treeW * 0.05, baseY - treeH * 0.58);
     }
 
-    // Ground fill under trees
-    g.fillStyle(0x1b5e20, 0.45);
+    // ── Scattered small bushes between trees ──
+    g.fillStyle(0x388e3c, 1);
+    for (let x = 0; x < totalW; x += 70) {
+      const bx = x + Math.random() * 50;
+      const r = 6 + Math.random() * 8;
+      g.fillCircle(bx, baseY + 2, r);
+      g.fillCircle(bx + r * 0.7, baseY + 1, r * 0.75);
+    }
+
+    // ── Layered ground fill ──
+    // Dark undergrowth
+    g.fillStyle(0x1b5e20, 1);
     g.fillRect(0, baseY, totalW, 100);
+    // Lighter grass strip on top
+    g.fillStyle(0x4caf50, 0.6);
+    g.fillRect(0, baseY, totalW, 6);
+
+    // ── Small grass tufts ──
+    g.fillStyle(0x43a047, 1);
+    for (let x = 0; x < totalW; x += 25) {
+      const tx = x + Math.random() * 15;
+      const th = 4 + Math.random() * 6;
+      g.fillTriangle(tx, baseY, tx + 2, baseY - th, tx + 4, baseY);
+      g.fillTriangle(tx + 5, baseY, tx + 7, baseY - th * 0.7, tx + 9, baseY);
+    }
   }
 
   /* ═══════════════════ CLOUDS ═══════════════════ */
