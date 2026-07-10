@@ -56,4 +56,12 @@ export const COLORS = {
   MOUNTAIN_NEAR: 0x4caf50,
   ROCK: 0x78909c,
   ROCK_DARK: 0x546e7a,
+  SNOW: 0xf5f5f5,
+  SNOW_SHADOW: 0xcfd8dc,
+  PEBBLE: 0x6d4c41,
+  PEBBLE_LIGHT: 0x8d6e63,
+  DUST_LIGHT: 0xbcaaa4,
+  DUST_MID: 0x8d6e63,
+  DUST_DARK: 0x795548,
+  MOSS: 0x558b2f,
 };

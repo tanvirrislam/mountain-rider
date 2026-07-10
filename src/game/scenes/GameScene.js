@@ -75,22 +75,48 @@ export default class GameScene extends Phaser.Scene {
   drawMountainLayer(color, scrollFactor, depth, alpha, amplitude, baseY) {
     const totalW = 6000;
     const g = this.add.graphics();
-    g.fillStyle(color, alpha);
-    g.beginPath();
-    g.moveTo(-200, baseY + amplitude + 200);
+    g.setScrollFactor(scrollFactor);
+    g.setDepth(depth);
 
+    // Generate mountain points
+    const mtnPoints = [];
     for (let x = -200; x <= totalW; x += 15) {
       const y = baseY + Math.sin(x / 250) * amplitude * 0.7
         + Math.sin(x / 100) * amplitude * 0.25
         + Math.cos(x / 400) * amplitude * 0.5;
-      g.lineTo(x, y);
+      mtnPoints.push({ x, y });
     }
+
+    // ── Base mountain fill ──
+    g.fillStyle(color, alpha);
+    g.beginPath();
+    g.moveTo(-200, baseY + amplitude + 200);
+    for (const p of mtnPoints) g.lineTo(p.x, p.y);
     g.lineTo(totalW, baseY + amplitude + 200);
     g.lineTo(-200, baseY + amplitude + 200);
     g.closePath();
     g.fillPath();
-    g.setScrollFactor(scrollFactor);
-    g.setDepth(depth);
+
+    // ── Shadow face on right side of peaks ──
+    const shadowColor = (color === COLORS.MOUNTAIN_FAR) ? 0x4caf50 : 0x2e7d32;
+    g.fillStyle(shadowColor, 0.4);
+    for (let i = 1; i < mtnPoints.length - 1; i++) {
+      const prev = mtnPoints[i - 1];
+      const curr = mtnPoints[i];
+      const next = mtnPoints[i + 1];
+      if (curr.y < prev.y && curr.y < next.y) {
+        const shadowEnd = Math.min(i + 6, mtnPoints.length - 1);
+        g.beginPath();
+        g.moveTo(curr.x, curr.y);
+        for (let j = i; j <= shadowEnd; j++) {
+          g.lineTo(mtnPoints[j].x, mtnPoints[j].y);
+        }
+        g.lineTo(mtnPoints[shadowEnd].x, curr.y + amplitude * 0.6);
+        g.lineTo(curr.x, curr.y + amplitude * 0.6);
+        g.closePath();
+        g.fillPath();
+      }
+    }
   }
 
   drawForestLayer(w, h) {
@@ -210,16 +236,21 @@ export default class GameScene extends Phaser.Scene {
   /* ═══════════════════ DUST PARTICLES ═══════════════════ */
 
   emitDust(x, y) {
-    for (let i = 0; i < 3; i++) {
+    const dustColors = [COLORS.DUST_LIGHT, COLORS.DUST_MID, COLORS.DUST_DARK];
+    for (let i = 0; i < 4; i++) {
+      const color = dustColors[Phaser.Math.Between(0, 2)];
+      const size = Phaser.Math.FloatBetween(1.5, 6);
       const p = this.add.circle(
-        x + Phaser.Math.Between(-10, 10),
-        y + Phaser.Math.Between(-5, 5),
-        Phaser.Math.Between(2, 5),
-        0x8d6e63,
-        0.6
+        x + Phaser.Math.Between(-12, 12),
+        y + Phaser.Math.Between(-6, 4),
+        size,
+        color,
+        Phaser.Math.FloatBetween(0.4, 0.7)
       );
       p.setDepth(DEPTH.PARTICLES);
       p.life = 0;
+      p.driftX = Phaser.Math.FloatBetween(-0.8, -0.2); // drift behind buggy
+      p.floatY = Phaser.Math.FloatBetween(0.3, 0.8);
       this.dustParticles.push(p);
     }
   }
@@ -279,13 +310,17 @@ export default class GameScene extends Phaser.Scene {
       );
     }
 
-    // Update dust particles (fade out)
+    // Update dust particles (fade out with drift)
     for (let i = this.dustParticles.length - 1; i >= 0; i--) {
       const p = this.dustParticles[i];
       p.life += delta;
-      p.y -= 0.5;
-      p.setAlpha(Math.max(0, 0.6 - p.life / 600));
-      if (p.life > 600) {
+      p.x += (p.driftX || -0.5);
+      p.y -= (p.floatY || 0.5);
+      // Grow slightly as they float
+      const scale = 1 + p.life / 1200;
+      p.setScale(scale);
+      p.setAlpha(Math.max(0, 0.65 - p.life / 700));
+      if (p.life > 700) {
         p.destroy();
         this.dustParticles.splice(i, 1);
       }

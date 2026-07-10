@@ -25,30 +25,48 @@ export default class MenuScene extends Phaser.Scene {
       this.add.image(w / 2, h / 2, skyKey);
     }
 
-    // Draw some gentle mountain silhouettes
+    // Draw far mountain silhouettes
     const mountains = this.add.graphics();
-    mountains.fillStyle(0x66bb6a, 0.6);
-    mountains.beginPath();
-    mountains.moveTo(0, h);
+    const farPts = [];
     for (let x = 0; x <= w; x += 10) {
       const y = h - 120 + Math.sin(x / 150) * 50 + Math.sin(x / 60) * 20;
-      mountains.lineTo(x, y);
+      farPts.push({ x, y });
     }
+    mountains.fillStyle(0x66bb6a, 0.8);
+    mountains.beginPath();
+    mountains.moveTo(0, h);
+    for (const p of farPts) mountains.lineTo(p.x, p.y);
     mountains.lineTo(w, h);
     mountains.closePath();
     mountains.fillPath();
 
     // Nearer mountains
-    mountains.fillStyle(0x43a047, 0.7);
-    mountains.beginPath();
-    mountains.moveTo(0, h);
+    const nearPts = [];
     for (let x = 0; x <= w; x += 10) {
       const y = h - 60 + Math.sin(x / 100) * 30 + Math.cos(x / 200) * 25;
-      mountains.lineTo(x, y);
+      nearPts.push({ x, y });
     }
+    mountains.fillStyle(0x43a047, 0.85);
+    mountains.beginPath();
+    mountains.moveTo(0, h);
+    for (const p of nearPts) mountains.lineTo(p.x, p.y);
     mountains.lineTo(w, h);
     mountains.closePath();
     mountains.fillPath();
+    // Shadow on right slopes
+    mountains.fillStyle(0x2e7d32, 0.35);
+    for (let i = 1; i < nearPts.length - 1; i++) {
+      if (nearPts[i].y < nearPts[i-1].y && nearPts[i].y < nearPts[i+1].y) {
+        const end = Math.min(i + 4, nearPts.length - 1);
+        mountains.beginPath();
+        mountains.moveTo(nearPts[i].x, nearPts[i].y);
+        for (let j = i; j <= end; j++) mountains.lineTo(nearPts[j].x, nearPts[j].y);
+        mountains.lineTo(nearPts[end].x, nearPts[i].y + 30);
+        mountains.lineTo(nearPts[i].x, nearPts[i].y + 30);
+        mountains.closePath();
+        mountains.fillPath();
+      }
+    }
 
     // A few floating clouds
     for (let i = 0; i < 5; i++) {
