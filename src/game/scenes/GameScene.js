@@ -134,19 +134,23 @@ export default class GameScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.setScrollFactor(0); // Fixed to screen
     g.setDepth(DEPTH.CLOUDS);
-    g.setAlpha(Phaser.Math.FloatBetween(0.5, 0.8));
+    g.setAlpha(Phaser.Math.FloatBetween(0.7, 0.95));
 
-    const s = Phaser.Math.FloatBetween(0.6, 1.2);
+    const s = Phaser.Math.FloatBetween(0.5, 1.2);
+
+    // Cloud shadow
+    g.fillStyle(0xcbe0ff, 0.9);
+    g.fillRoundedRect(-40 * s, -5 * s, 80 * s, 24 * s, 12 * s);
+    g.fillCircle(-20 * s, -5 * s, 16 * s);
+    g.fillCircle(0 * s, -15 * s, 24 * s);
+    g.fillCircle(20 * s, -8 * s, 18 * s);
+
+    // Cloud body
     g.fillStyle(0xffffff, 1);
-    g.fillCircle(0, 0, 30 * s);
-    g.fillCircle(25 * s, -8 * s, 22 * s);
-    g.fillCircle(-22 * s, 5 * s, 18 * s);
-    g.fillCircle(18 * s, 10 * s, 20 * s);
-    g.fillCircle(-10 * s, -12 * s, 16 * s);
-
-    // Subtle highlight
-    g.fillStyle(0xffffff, 0.4);
-    g.fillCircle(-5 * s, -15 * s, 14 * s);
+    g.fillRoundedRect(-42 * s, -8 * s, 80 * s, 24 * s, 12 * s);
+    g.fillCircle(-22 * s, -8 * s, 16 * s);
+    g.fillCircle(-2 * s, -18 * s, 24 * s);
+    g.fillCircle(18 * s, -11 * s, 18 * s);
 
     g.setPosition(x, y);
     return g;

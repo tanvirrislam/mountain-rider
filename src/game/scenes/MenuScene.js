@@ -61,11 +61,20 @@ export default class MenuScene extends Phaser.Scene {
 
   drawMenuCloud(x, y) {
     const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.7);
-    const s = Phaser.Math.FloatBetween(0.5, 1.0);
-    g.fillCircle(x, y, 25 * s);
-    g.fillCircle(x + 20 * s, y - 6 * s, 18 * s);
-    g.fillCircle(x - 18 * s, y + 4 * s, 14 * s);
-    g.fillCircle(x + 12 * s, y + 8 * s, 16 * s);
+    const s = Phaser.Math.FloatBetween(0.5, 1.2);
+
+    // Shadow
+    g.fillStyle(0x90caf9, 0.6); // slightly darker/blue for menu sky
+    g.fillRoundedRect(x - 40 * s, y - 5 * s, 80 * s, 24 * s, 12 * s);
+    g.fillCircle(x - 20 * s, y - 5 * s, 16 * s);
+    g.fillCircle(x, y - 15 * s, 24 * s);
+    g.fillCircle(x + 20 * s, y - 8 * s, 18 * s);
+
+    // Body
+    g.fillStyle(0xffffff, 0.9);
+    g.fillRoundedRect(x - 42 * s, y - 8 * s, 80 * s, 24 * s, 12 * s);
+    g.fillCircle(x - 22 * s, y - 8 * s, 16 * s);
+    g.fillCircle(x - 2 * s, y - 18 * s, 24 * s);
+    g.fillCircle(x + 18 * s, y - 11 * s, 18 * s);
   }
 }
