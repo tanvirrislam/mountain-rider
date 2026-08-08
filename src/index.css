@@ -203,16 +203,9 @@ body {
 }
 
 .result-stat .stat-value.green  { color: #90a29a; }
-.result-stat .stat-value.orange { color: #ffab40; }
-.result-stat .stat-value.red    { color: #ff5252; }
+.result-stat .stat-value.orange { color: #ffffff; }
+.result-stat .stat-value.red    { color: #ffffff; }
 
-/* ── Crash title ── */
-.crash-title {
-  background: linear-gradient(135deg, #ff1744, #ff5252);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 12px rgba(255,23,68,0.4));
-}
 
 /* ── Floating animation for menu buggy icon ── */
 @keyframes float {

@@ -2,9 +2,9 @@ export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 
 export const PHYSICS = {
-  GRAVITY_Y: 0.9,       // Lighter gravity — more forgiving jumps
+  GRAVITY_Y: 0.9,       // Lighter gravity 
   BUGGY: {
-    MASS: 25,            // Lighter = easier to push uphill
+    MASS: 25,            // Lighter
     FRICTION: 0.15,
     RESTITUTION: 0.04,
   },

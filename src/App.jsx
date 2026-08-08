@@ -72,8 +72,7 @@ function App() {
       {/* show when game is over */}
       {gameState === 'gameover' && (
         <div className="menu-overlay">
-          <div className="menu-icon">💥</div>
-          <h1 className="menu-title crash-title">Crashed!</h1>
+          <h1 className="menu-title">Crashed!</h1>
           <div className="result-stats">
             <div className="result-stat">
               <div className="stat-label">Distance</div>
@@ -84,7 +83,7 @@ function App() {
               <div className="stat-value red">{stats.time.toFixed(1)}s</div>
             </div>
           </div>
-          <button className="btn" onClick={handleRestart}>↻ Try Again</button>
+          <button className="btn" onClick={handleRestart}>Try Again</button>
         </div>
       )}
 

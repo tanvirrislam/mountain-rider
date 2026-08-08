@@ -16,31 +16,31 @@ export default class GameScene extends Phaser.Scene {
     this.setGameState = this.registry.get('setGameState');
     this.setStats = this.registry.get('setStats');
 
-    // ── Background ──
+    // Background
     this.createBackground();
 
-    // ── Terrain ──
+    // Terrain
     this.terrain = new Terrain(this);
 
-    // ── Player ──
+    // Player
     this.buggy = new Buggy(this, 250, 350);
 
-    // ── Camera ──
+    // Camera
     this.cameras.main.setBounds(0, 0, this.terrain.terrainWidth + 200, 1500);
     this.cameras.main.startFollow(this.buggy.chassisSprite, true, 0.06, 0.06, -80, 40);
 
-    // ── Collisions ──
+    // Collisions
     this.matter.world.on('collisionstart', this.handleCollisions, this);
 
-    // ── Clouds array for animation ──
+    // Clouds array
     this.clouds = [];
     this.spawnClouds();
 
-    // ── Dust emitter placeholder ──
+    // Dust emitter placeholder
     this.dustParticles = [];
   }
 
-  /* ═══════════════════ BACKGROUND ═══════════════════ */
+  // background
 
   createBackground() {
     const w = this.cameras.main.width;
@@ -62,10 +62,10 @@ export default class GameScene extends Phaser.Scene {
       sky.setDepth(DEPTH.SKY);
     }
 
-    // ── Mountain silhouettes (far) ──
+    //  Mountain back layer
     this.drawMountainLayer(COLORS.MOUNTAIN_FAR, 0.08, DEPTH.MOUNTAINS_FAR, 1, 100, 280);
 
-    // ── Mountain silhouettes (near) ──
+    // Mountain front layer
     this.drawMountainLayer(COLORS.MOUNTAIN_NEAR, 0.15, DEPTH.MOUNTAINS_NEAR, 2, 120, 320);
 
     // ── Forest silhouette ──
@@ -87,7 +87,7 @@ export default class GameScene extends Phaser.Scene {
       mtnPoints.push({ x, y });
     }
 
-    // ── Base mountain fill ──
+    // Base mountain fill
     g.fillStyle(color, alpha);
     g.beginPath();
     g.moveTo(-200, baseY + amplitude + 200);
@@ -97,7 +97,7 @@ export default class GameScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
 
-    // ── Shadow face on right side of peaks ──
+    // Shadow face on right side of peaks
     const shadowColor = (color === COLORS.MOUNTAIN_FAR) ? 0x4caf50 : 0x2e7d32;
     g.fillStyle(shadowColor, 0.4);
     for (let i = 1; i < mtnPoints.length - 1; i++) {
@@ -123,7 +123,7 @@ export default class GameScene extends Phaser.Scene {
     const totalW = 6000;
     const baseY = 420;
 
-    // ── Back row of trees (lighter, smaller — creates depth) ──
+    //  Back row of trees
     const gBack = this.add.graphics();
     gBack.setDepth(DEPTH.FOREST - 1);
     gBack.setScrollFactor(0.17);
@@ -140,7 +140,7 @@ export default class GameScene extends Phaser.Scene {
       gBack.fillTriangle(cx - treeW * 0.35, baseY - treeH * 0.3, cx, baseY - treeH * 1.15, cx + treeW * 0.35, baseY - treeH * 0.3);
     }
 
-    // ── Main forest layer ──
+    // Main forest layer
     const g = this.add.graphics();
     g.setDepth(DEPTH.FOREST);
     g.setScrollFactor(0.2);
@@ -167,7 +167,7 @@ export default class GameScene extends Phaser.Scene {
       g.fillTriangle(cx - treeW * 0.22, baseY - treeH * 0.58, cx - 2, baseY - treeH * 1.02, cx + treeW * 0.05, baseY - treeH * 0.58);
     }
 
-    // ── Scattered small bushes between trees ──
+    // Scattered small bushes between trees
     g.fillStyle(0x388e3c, 1);
     for (let x = 0; x < totalW; x += 70) {
       const bx = x + Math.random() * 50;
@@ -176,7 +176,7 @@ export default class GameScene extends Phaser.Scene {
       g.fillCircle(bx + r * 0.7, baseY + 1, r * 0.75);
     }
 
-    // ── Layered ground fill ──
+    // Layered ground fill
     // Dark undergrowth
     g.fillStyle(0x1b5e20, 1);
     g.fillRect(0, baseY, totalW, 100);
@@ -184,7 +184,7 @@ export default class GameScene extends Phaser.Scene {
     g.fillStyle(0x4caf50, 0.6);
     g.fillRect(0, baseY, totalW, 6);
 
-    // ── Small grass tufts ──
+    // Small grass tufts
     g.fillStyle(0x43a047, 1);
     for (let x = 0; x < totalW; x += 25) {
       const tx = x + Math.random() * 15;
@@ -194,8 +194,8 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  /* ═══════════════════ CLOUDS ═══════════════════ */
 
+  // clouds
   spawnClouds() {
     for (let i = 0; i < 8; i++) {
       const cloud = this.createCloudGraphic(
@@ -233,8 +233,8 @@ export default class GameScene extends Phaser.Scene {
     return g;
   }
 
-  /* ═══════════════════ DUST PARTICLES ═══════════════════ */
 
+  // dust
   emitDust(x, y) {
     const dustColors = [COLORS.DUST_LIGHT, COLORS.DUST_MID, COLORS.DUST_DARK];
     for (let i = 0; i < 4; i++) {
@@ -249,13 +249,13 @@ export default class GameScene extends Phaser.Scene {
       );
       p.setDepth(DEPTH.PARTICLES);
       p.life = 0;
-      p.driftX = Phaser.Math.FloatBetween(-0.8, -0.2); // drift behind buggy
+      p.driftX = Phaser.Math.FloatBetween(-0.8, -0.2);
       p.floatY = Phaser.Math.FloatBetween(0.3, 0.8);
       this.dustParticles.push(p);
     }
   }
 
-  /* ═══════════════════ COLLISIONS ═══════════════════ */
+  // collision
 
   handleCollisions(event) {
     if (this.isGameOver || this.isVictory) return;
@@ -283,7 +283,7 @@ export default class GameScene extends Phaser.Scene {
     this.scene.pause();
   }
 
-  /* ═══════════════════ UPDATE ═══════════════════ */
+  // update
 
   update(time, delta) {
     if (this.isGameOver || this.isVictory) return;
@@ -295,13 +295,13 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    // ── Move clouds ──
+    // Move clouds
     for (const c of this.clouds) {
       c.x += c.speedX;
       if (c.x > 1400) c.x = -200;
     }
 
-    // ── Dust ──
+    // Dust
     if (stats.isAccelerating) {
       // Emit from rear wheel position
       this.emitDust(
@@ -310,7 +310,7 @@ export default class GameScene extends Phaser.Scene {
       );
     }
 
-    // Update dust particles (fade out with drift)
+    // Update dust particles
     for (let i = this.dustParticles.length - 1; i >= 0; i--) {
       const p = this.dustParticles[i];
       p.life += delta;
@@ -326,7 +326,7 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── HUD stats ──
+    // HUD stats
     if (this.setStats) {
       const dist = Math.max(0, (stats.distance - 250) / 100);
       const elapsed = (time - this.startTime) / 1000;
