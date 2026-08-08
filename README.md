@@ -2,6 +2,8 @@
 
 Mountain Rider is a 2D physics-based side-scrolling driving game built as a University Computer Graphics Lab project. It features procedural terrain generation, advanced vehicle physics, and a modern React-based UI, all drawn entirely with code (no external image assets).
 
+For a presentation-friendly walkthrough of how the project works, see [PROJECT_WORKFLOW.md](./PROJECT_WORKFLOW.md).
+
 ## 🏗️ Architecture & Tech Stack
 
 This project uses a hybrid architecture, combining the strengths of three powerful libraries:

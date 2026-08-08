@@ -1,10 +1,6 @@
-import Phaser from 'phaser';
-import { DEPTH, COLORS } from '../utils/constants';
+import Phaser from 'phaser'
+import { DEPTH, COLORS } from '../utils/constants'
 
-/**
- * Procedurally generated terrain with layered grass, dirt,
- * decorative details, and a proper finish zone.
- */
 export default class Terrain {
   constructor(scene) {
     this.scene = scene;
@@ -20,7 +16,7 @@ export default class Terrain {
     this.addFinishZone();
   }
 
-  /* ── Generate height-map points ── */
+  // Generate height-map points
   generateTerrain() {
     const startY = 500;
     const finishZoneStart = this.terrainWidth - 500; // Last 500px is flat finish
@@ -62,12 +58,12 @@ export default class Terrain {
     }
   }
 
-  /* ── Draw terrain with layered fill ── */
+  // Draw terrain with layered fill
   drawTerrain() {
     const pts = this.points;
     const bottom = 1200;
 
-    // ── Deep earth fill (darkest layer at the bottom) ──
+    // Deep earth fill
     const deepEarth = this.scene.add.graphics();
     deepEarth.fillStyle(0x3e2723, 1);
     deepEarth.beginPath();
@@ -79,7 +75,7 @@ export default class Terrain {
     deepEarth.fillPath();
     deepEarth.setDepth(DEPTH.TERRAIN_BG);
 
-    // ── Mid dirt layer ──
+    //  Mid dirt layer
     const midDirt = this.scene.add.graphics();
     midDirt.fillStyle(COLORS.DIRT_BOTTOM, 1);
     midDirt.beginPath();
@@ -90,7 +86,7 @@ export default class Terrain {
     midDirt.fillPath();
     midDirt.setDepth(DEPTH.TERRAIN_BG + 0.3);
 
-    // ── Upper dirt layer (lighter brown) ──
+    //  Upper dirt layer
     const dirtTop = this.scene.add.graphics();
     dirtTop.fillStyle(COLORS.DIRT_TOP, 1);
     dirtTop.beginPath();
@@ -101,7 +97,7 @@ export default class Terrain {
     dirtTop.fillPath();
     dirtTop.setDepth(DEPTH.TERRAIN_BG + 0.6);
 
-    // ── Soil texture lines (cross-hatch for rough dirt look) ──
+    // Soil texture lines
     const soilTex = this.scene.add.graphics();
     soilTex.setDepth(DEPTH.TERRAIN_BG + 0.8);
     for (let i = 0; i < pts.length - 1; i += 2) {
@@ -121,7 +117,7 @@ export default class Terrain {
       }
     }
 
-    // ── Scattered pebbles & small stones ──
+    // Scattered pebbles & small stones
     const pebbles = this.scene.add.graphics();
     pebbles.setDepth(DEPTH.TERRAIN_BG + 1);
     for (let i = 0; i < pts.length - 1; i += 2) {
@@ -140,7 +136,7 @@ export default class Terrain {
       }
     }
 
-    // ── Green grass body ──
+    // Green grass body
     const grass = this.scene.add.graphics();
     grass.fillStyle(COLORS.GRASS_MID, 1);
     grass.beginPath();
@@ -151,7 +147,7 @@ export default class Terrain {
     grass.fillPath();
     grass.setDepth(DEPTH.TERRAIN_FG);
 
-    // ── Grass-to-dirt transition band (soft edge) ──
+    // Grass-to-dirt transition band
     const transition = this.scene.add.graphics();
     transition.setDepth(DEPTH.TERRAIN_FG - 0.5);
     // Dark green band just below grass
@@ -163,7 +159,7 @@ export default class Terrain {
     transition.closePath();
     transition.fillPath();
 
-    // ── Bright grass top strip (thicker, two-tone) ──
+    // Bright grass top strip
     const grassTop = this.scene.add.graphics();
     grassTop.setDepth(DEPTH.TERRAIN_FG + 1);
     // Darker bottom edge
@@ -183,7 +179,7 @@ export default class Terrain {
     }
     grassTop.strokePath();
 
-    // ── Dense grass blades ──
+    // Dense grass blades
     const blades = this.scene.add.graphics();
     blades.setDepth(DEPTH.TERRAIN_FG + 2);
     const bladeColors = [0x81c784, 0x66bb6a, 0x4caf50, 0xa5d6a7];
@@ -202,7 +198,7 @@ export default class Terrain {
       }
     }
 
-    // ── Physics segments ──
+    // Physics segments
     for (let i = 0; i < pts.length - 1; i++) {
       const p1 = pts[i];
       const p2 = pts[i + 1];
@@ -224,7 +220,7 @@ export default class Terrain {
     }
   }
 
-  /* ── Obstacles ── */
+  // Obstacles
   addObstacles() {
     const rockPositions = [1200, 2000, 2600];
     const rockSizes = [18, 15, 20];
