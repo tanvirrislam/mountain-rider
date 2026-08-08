@@ -31,7 +31,7 @@ function App() {
     <>
       <div id="game-container" />
 
-      {/* ═══ HUD ═══ */}
+      {/* show speed, time and other */}
       {gameState === 'playing' && (
         <div className="ui-overlay">
           <div className="hud-top">
@@ -51,13 +51,13 @@ function App() {
         </div>
       )}
 
-      {/* ═══ MAIN MENU ═══ */}
+      {/* main menu */}
       {gameState === 'menu' && (
         <div className="menu-overlay">
           <div className="menu-icon">🏔️</div>
           <h1 className="menu-title">Mountain Rider</h1>
           <p className="menu-subtitle">Physics Driving Game</p>
-          <button className="btn btn-pulse" onClick={handleStart}>
+          <button className="btn" onClick={handleStart}>
             ▶ Start Engine
           </button>
           <div className="controls-hint">
@@ -69,7 +69,7 @@ function App() {
         </div>
       )}
 
-      {/* ═══ GAME OVER ═══ */}
+      {/* show when game is over */}
       {gameState === 'gameover' && (
         <div className="menu-overlay">
           <div className="menu-icon">💥</div>
@@ -88,11 +88,11 @@ function App() {
         </div>
       )}
 
-      {/* ═══ VICTORY ═══ */}
+      {/* show when game is finished */}
       {gameState === 'victory' && (
         <div className="menu-overlay">
           <div className="menu-icon">🏁</div>
-          <h1 className="menu-title victory-title">Victory!</h1>
+          <h1 className="menu-title">Victory!</h1>
           <div className="result-stats">
             <div className="result-stat">
               <div className="stat-label">Time</div>
