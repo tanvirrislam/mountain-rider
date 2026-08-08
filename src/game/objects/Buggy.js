@@ -1,22 +1,19 @@
-import Phaser from 'phaser';
-import { PHYSICS, DEPTH, COLORS } from '../utils/constants';
+import Phaser from 'phaser'
+import { PHYSICS, DEPTH, COLORS } from '../utils/constants'
 
-/**
- * Buggy — fully code-drawn off-road vehicle.
- * Wide wheelbase + low center of gravity + self-righting torque = very hard to flip.
- */
+
 export default class Buggy {
   constructor(scene, x, y) {
     this.scene = scene;
 
-    // ── Dimensions — wider wheelbase for stability ──
-    const chassisW = 120;
-    const chassisH = 24;       // Flatter body = lower CoG
-    const wheelRadius = 22;
-    const wheelOffsetX = 50;   // Wider wheelbase = much more stable
-    const wheelOffsetY = 18;
+    
+    const chassisW = 120
+    const chassisH = 24     
+    const wheelRadius = 22
+    const wheelOffsetX = 50 
+    const wheelOffsetY = 18
 
-    // ── Physics : Chassis ──
+    // chassis Physics 
     this.chassis = scene.matter.add.rectangle(x, y, chassisW, chassisH, {
       mass: PHYSICS.BUGGY.MASS,
       friction: PHYSICS.BUGGY.FRICTION,
@@ -30,7 +27,7 @@ export default class Buggy {
     // Shift center of mass downward for natural stability
     scene.matter.body.setCentre(this.chassis, { x: 0, y: 6 }, true);
 
-    // ── Physics : Wheels ──
+    // Physics : Wheels
     const wheelOpts = {
       mass: PHYSICS.WHEEL.MASS,
       friction: PHYSICS.WHEEL.FRICTION,
@@ -41,7 +38,7 @@ export default class Buggy {
     this.wheelA = scene.matter.add.circle(x - wheelOffsetX, y + wheelOffsetY, wheelRadius, wheelOpts);
     this.wheelB = scene.matter.add.circle(x + wheelOffsetX, y + wheelOffsetY, wheelRadius, wheelOpts);
 
-    // ── Physics : Suspension (Spring constraints) ──
+    // Physics : Suspension
     const stiff = PHYSICS.SUSPENSION.STIFFNESS;
     const damp = PHYSICS.SUSPENSION.DAMPING;
     const len = PHYSICS.SUSPENSION.LENGTH;
@@ -66,11 +63,11 @@ export default class Buggy {
     this.wheelASprite.setDepth(DEPTH.BUGGY + 1);
     this.wheelBSprite.setDepth(DEPTH.BUGGY + 1);
 
-    // ── Input ──
+    // Input
     this.cursors = scene.input.keyboard.createCursorKeys();
     this.keys = scene.input.keyboard.addKeys('W,A,S,D');
 
-    // ── State ──
+    // State
     this.upsideDownTimer = 0;
     this.isAccelerating = false;
   }
@@ -78,11 +75,11 @@ export default class Buggy {
   createChassisTexture(scene, w, h) {
     const g = scene.add.graphics();
     
-    // --- Shadow ---
+    // Shadow
     g.fillStyle(0x000000, 0.2);
     g.fillRoundedRect(-w / 2 - 4, -h / 2 + 8, w + 8, h + 4, 8);
 
-    // --- Rear Engine / Exhaust ---
+    // Rear Engine 
     // Engine block
     g.fillStyle(0x424242, 1);
     g.fillRoundedRect(-w/2 - 14, -h/2 - 6, 24, 20, 4);
@@ -95,11 +92,11 @@ export default class Buggy {
     g.fillStyle(0x212121, 1);
     g.fillCircle(-w/2 - 18, -h/2 + 5, 2);
 
-    // --- Main Lower Body ---
+    // Main Lower Body
     g.fillStyle(COLORS.BUGGY_BODY_DARK, 1);
     g.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
     
-    // Gradient-like layering for the body
+    // layering for the body
     g.fillStyle(COLORS.BUGGY_BODY, 1);
     g.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h - 4, 6);
     
@@ -112,7 +109,7 @@ export default class Buggy {
     g.fillStyle(0x212121, 0.8);
     g.fillRect(-w/2 + 10, 0, w - 20, 2);
 
-    // --- Cab / Cockpit ---
+    // Cockpit
     const cabStartX = -15;
     const cabWidth = 55;
     const cabHeight = 30;
@@ -160,7 +157,7 @@ export default class Buggy {
     g.closePath();
     g.fillPath();
 
-    // --- Roll Cage (Rear & Top) ---
+    // Roll Cage
     g.lineStyle(4, 0x212121, 1);
     // Top roof rack
     g.lineBetween(cabStartX + 2, cabY - cabHeight - 2, cabStartX + cabWidth - 12, cabY - cabHeight - 2);
@@ -176,7 +173,7 @@ export default class Buggy {
     g.lineTo(cabStartX - 15, cabY - 20);
     g.strokePath();
 
-    // --- Front Bumper / Bullbar ---
+    // Front Bumper
     g.lineStyle(4, 0x212121, 1);
     g.beginPath();
     g.moveTo(w/2 - 5, 5);
@@ -189,7 +186,7 @@ export default class Buggy {
     g.lineStyle(3, 0x424242, 1);
     g.lineBetween(w/2 + 10, 5, w/2 + 15, -5);
 
-    // --- Fenders ---
+    // Fenders
     // Background of fenders (dark)
     g.lineStyle(8, 0x111111, 1);
     g.beginPath();
@@ -208,7 +205,7 @@ export default class Buggy {
     g.arc(50, 18, 28, Math.PI, 0, false);
     g.strokePath();
 
-    // --- Headlight ---
+    // Headlight
     // Housing
     g.fillStyle(0x424242, 1);
     g.fillRoundedRect(w / 2 - 4, -h/2 - 4, 10, 12, 3);
@@ -219,7 +216,7 @@ export default class Buggy {
     g.fillStyle(0xffffff, 0.8);
     g.fillCircle(w / 2 + 3, -h/2 + 2, 2);
 
-    // --- Tail light ---
+    // Tail light
     g.fillStyle(0x212121, 1);
     g.fillRoundedRect(-w / 2 - 4, -h/2 - 2, 6, 12, 2);
     g.fillStyle(0xd50000, 1);
@@ -275,8 +272,6 @@ export default class Buggy {
     return g;
   }
 
-  /* ---------- update ---------- */
-
   update(delta) {
     const MBody = this.scene.matter.body;
 
@@ -290,9 +285,6 @@ export default class Buggy {
     this.wheelBSprite.setPosition(this.wheelB.position.x, this.wheelB.position.y);
     this.wheelBSprite.setRotation(this.wheelB.angle);
 
-    // ── Self-righting torque ──
-    // Always gently push the chassis back toward upright (angle = 0).
-    // This is the KEY to preventing easy flips.
     const currentAngle = this.chassis.angle;
     const correctionStrength = 0.002;
     const angularDamping = 0.04;
@@ -303,7 +295,7 @@ export default class Buggy {
       this.chassis.angularVelocity * (1 - angularDamping) - currentAngle * correctionStrength
     );
 
-    // ── Input ──
+    // Input
     const accel = PHYSICS.CONTROLS.SPEED;
     const airRot = PHYSICS.CONTROLS.AIR_ROTATION;
     this.isAccelerating = false;
@@ -311,7 +303,6 @@ export default class Buggy {
     if (this.cursors.right.isDown || this.keys.D.isDown) {
       MBody.setAngularVelocity(this.wheelA, accel);
       MBody.setAngularVelocity(this.wheelB, accel);
-      // Very gentle air tilt — reduced from 0.15 to 0.06
       MBody.setAngularVelocity(
         this.chassis,
         this.chassis.angularVelocity + airRot * 0.06
@@ -327,7 +318,7 @@ export default class Buggy {
       this.isAccelerating = true;
     }
 
-    // ── Upside-down detection ──
+    // Upside-down detection
     const deg = Phaser.Math.RadToDeg(this.chassis.angle) % 360;
     const norm = deg < 0 ? deg + 360 : deg;
     if (norm > 120 && norm < 240) {       // Even wider safe zone
