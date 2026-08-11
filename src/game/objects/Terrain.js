@@ -4,7 +4,7 @@ import { DEPTH, COLORS } from '../utils/constants'
 export default class Terrain {
   constructor(scene) {
     this.scene = scene;
-    this.terrainWidth = 3800;   // Slightly longer for finish zone
+    this.terrainWidth = 3800;
     this.segmentLength = 40;
 
     this.points = [];
@@ -26,7 +26,7 @@ export default class Terrain {
       const hillY = startY
         + Math.sin(x / 350) * 60
         + Math.sin(x / 180) * 30
-        + Math.cos(x / 90)  * 10
+        + Math.cos(x / 90) * 10
         + (Math.random() - 0.5) * 4;
 
       let y;
