@@ -192,10 +192,10 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Move clouds
+    // Move clouds smoothly without on-screen pop-in
     for (const c of this.clouds) {
       c.x += c.speedX;
-      if (c.x > 1450) c.x = -220;
+      if (c.x > 1560) c.x = -270;
     }
 
     // Dust

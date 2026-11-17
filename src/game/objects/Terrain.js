@@ -62,18 +62,18 @@ export default class Terrain {
 
   /**
    * Renders ultra-realistic 3D-shaded road, geological rock/soil cliff cutaway,
-   * roadside guardrails, and lush meadow grass + wildflowers.
+   * roadside guardrails, and lush meadow grass + wildflowers with zero seams.
    */
   drawTerrain() {
     const pts = this.points;
-    const bottom = 1200;
+    const bottom = 1500;
 
-    // 1. Deep abyssal bedrock fill below canvas slices
+    // 1. Deep abyssal bedrock fill overlapping well inside the canvas slices
     const deepBedrock = this.scene.add.graphics();
     deepBedrock.fillStyle(0x14100d, 1);
     deepBedrock.beginPath();
-    deepBedrock.moveTo(pts[0].x, pts[0].y + 180);
-    for (const p of pts) deepBedrock.lineTo(p.x, p.y + 180);
+    deepBedrock.moveTo(pts[0].x, pts[0].y + 90);
+    for (const p of pts) deepBedrock.lineTo(p.x, p.y + 90);
     deepBedrock.lineTo(this.terrainWidth, bottom);
     deepBedrock.lineTo(0, bottom);
     deepBedrock.closePath();
@@ -83,19 +83,19 @@ export default class Terrain {
     // 2. Per-pixel 3D normal-lit geological cliff + gravel/asphalt roadbed slices
     const sliceW = 1900;
     const minY = 270;
-    const maxY = 830;
+    const maxY = 860;
     const sliceH = maxY - minY;
 
     for (let sIdx = 0; sIdx < 2; sIdx++) {
       const startX = sIdx * sliceW;
-      const key = `terrain-ultra-slice-v2-${sIdx}`;
+      const key = `terrain-ultra-slice-v3-${sIdx}`;
 
       getOrCreateCanvasTexture(this.scene, key, sliceW, sliceH, (ctx, w, h) => {
         const imgData = ctx.createImageData(w, h);
         const data = imgData.data;
 
-        const surfY = new Float32Array(w);
-        for (let lx = 0; lx < w; lx++) {
+        const surfY = new Float32Array(w + 2);
+        for (let lx = 0; lx <= w + 1; lx++) {
           surfY[lx] = this.getHeightAtX(startX + lx) - minY;
         }
 
@@ -107,7 +107,7 @@ export default class Terrain {
         for (let lx = 0; lx < w; lx++) {
           const wx = startX + lx;
           const topY = surfY[lx];
-          const topYNext = surfY[Math.min(w - 1, lx + 1)];
+          const topYNext = surfY[lx + 1];
           const roadSlope = topYNext - topY;
           const yStart = Math.max(0, Math.floor(topY - 2));
 
@@ -118,78 +118,84 @@ export default class Terrain {
             const idx = (ly * w + lx) * 4;
             const edgeAlpha = depthBelowRoad < 0 ? Math.max(0, 1 + depthBelowRoad / 1.5) : 1;
 
-            // Coarse & fine procedural noise for road gravel, soil & fractured rock
             const nMacro = fbm2D(wx * 0.018, (ly + minY) * 0.022, 3, 401);
             const nMed = valueNoise2D(wx * 0.08, (ly + minY) * 0.09, 509);
             const nFine = valueNoise2D(wx * 0.35, (ly + minY) * 0.35, 613);
 
+            // Compute road surface color (compacted mountain macadam/gravel with tire ruts)
+            const slopeShade = Math.max(0.76, Math.min(1.18, 1 - roadSlope * 0.22));
+            const crown = Math.sin(Math.min(1, Math.max(0, depthBelowRoad / 12)) * Math.PI);
+            const tireRut = (depthBelowRoad > 2.5 && depthBelowRoad < 6.5) ? 0.84 : 1.0;
+            const gravelSpeck = (nFine - 0.5) * 32 + (nMed - 0.5) * 18;
+            const roadR = (108 + 22 * crown + gravelSpeck) * tireRut * slopeShade;
+            const roadG = (94 + 18 * crown + gravelSpeck * 0.9) * tireRut * slopeShade;
+            const roadB = (80 + 14 * crown + gravelSpeck * 0.8) * tireRut * slopeShade;
+
+            // Compute grassy verge & humus topsoil color
+            const grassEdgeDepth = 16 + (nMed - 0.5) * 5;
+            const grassFactor = Math.max(0, Math.min(1, 1 - Math.abs(depthBelowRoad - 13) / 7 + (nFine - 0.5) * 0.3));
+            const soilShade = 0.65 + nMed * 0.45 + (nFine - 0.5) * 0.25;
+            const grassR = (44 + nFine * 30) * slopeShade;
+            const grassG = (80 + nFine * 42) * slopeShade;
+            const grassB = (28 + nFine * 18);
+            const humusR = 66 * soilShade;
+            const humusG = 47 * soilShade;
+            const humusB = 33 * soilShade;
+            const vergeR = humusR * (1 - grassFactor) + grassR * grassFactor;
+            const vergeG = humusG * (1 - grassFactor) + grassG * grassFactor;
+            const vergeB = humusB * (1 - grassFactor) + grassB * grassFactor;
+
+            // Compute 3D normal-mapped cliff rock & loam color
+            const strataWave = Math.sin((ly + minY) * 0.11 + nMacro * 7 + wx * 0.008);
+            const nMacroNextX = fbm2D((wx + 2) * 0.018, (ly + minY) * 0.022, 3, 401);
+            const nMacroNextY = fbm2D(wx * 0.018, (ly + 2 + minY) * 0.022, 3, 401);
+            const dHdx = (nMacroNextX - nMacro) * 16 + (nFine - 0.5) * 0.9;
+            const dHdy = (nMacroNextY - nMacro) * 14 + strataWave * 0.45;
+            const invLen = 1 / Math.sqrt(dHdx * dHdx + dHdy * dHdy + 1);
+            const nx = dHdx * invLen;
+            const ny = dHdy * invLen;
+            const nz = invLen;
+
+            const diff = Math.max(0.14, nx * sunX + ny * sunY + nz * sunZ);
+            const ao = Math.min(1, Math.max(0.2, (depthBelowRoad - 16) / 28)) * 0.35 + 0.65;
+            const deepFade = Math.max(0.16, 1 - depthBelowRoad / 360);
+            const light = diff * ao * deepFade * (0.85 + nFine * 0.3);
+
+            const rockBlend = Math.min(1, Math.max(0, (depthBelowRoad - 22) / 52));
+            let cliffR = (114 * (1 - rockBlend) + 102 * rockBlend + strataWave * 10) * light;
+            let cliffG = (88 * (1 - rockBlend) + 96 * rockBlend + strataWave * 8) * light;
+            let cliffB = (66 * (1 - rockBlend) + 92 * rockBlend + strataWave * 6) * light;
+
+            if (ny < -0.18 && depthBelowRoad > 24 && depthBelowRoad < 130) {
+              const mossAmt = Math.min(0.75, (-ny - 0.18) * 2.2 * (1 - depthBelowRoad / 130));
+              cliffR = cliffR * (1 - mossAmt) + 52 * light * 1.3 * mossAmt;
+              cliffG = cliffG * (1 - mossAmt) + 86 * light * 1.3 * mossAmt;
+              cliffB = cliffB * (1 - mossAmt) + 36 * light * 1.3 * mossAmt;
+            }
+
+            // Smooth organic blending between Road -> Grassy Verge -> Cliff Wall (zero hard horizontal lines)
             let r;
             let g;
             let b;
+            const roadEdge = 9.5 + (nFine - 0.5) * 2.2;
+            const cliffEdge = 24 + (nMacro - 0.5) * 9;
 
-            if (depthBelowRoad < 12) {
-              // ── Compacted Mountain Gravel & Macadam Road Surface ──
-              const crown = Math.sin((depthBelowRoad / 12) * Math.PI);
-              const tireRut = (depthBelowRoad > 2.5 && depthBelowRoad < 6.5) ? 0.84 : 1.0;
-              const gravelSpeck = (nFine - 0.5) * 34 + (nMed - 0.5) * 20;
-              const slopeShade = Math.max(0.75, Math.min(1.18, 1 - roadSlope * 0.22));
-
-              r = (118 * crown * tireRut + gravelSpeck) * slopeShade;
-              g = (102 * crown * tireRut + gravelSpeck * 0.9) * slopeShade;
-              b = (86 * crown * tireRut + gravelSpeck * 0.8) * slopeShade;
-            } else if (depthBelowRoad < 26 + (nMacro - 0.5) * 10) {
-              // ── Lush Grassy Overhang & Root-Rich Humus Topsoil ──
-              const localT = (depthBelowRoad - 12) / 14;
-              const grassMix = Math.max(0, 1 - localT * 1.45 + (nMed - 0.5) * 0.45);
-              const soilShade = 0.65 + nMed * 0.45 + (nFine - 0.5) * 0.25;
-
-              const grassR = (46 + nFine * 32) * (1 - roadSlope * 0.15);
-              const grassG = (82 + nFine * 44) * (1 - roadSlope * 0.15);
-              const grassB = (30 + nFine * 18);
-
-              const humusR = 68 * soilShade;
-              const humusG = 48 * soilShade;
-              const humusB = 34 * soilShade;
-
-              r = humusR * (1 - grassMix) + grassR * grassMix;
-              g = humusG * (1 - grassMix) + grassG * grassMix;
-              b = humusB * (1 - grassMix) + grassB * grassMix;
+            if (depthBelowRoad < roadEdge) {
+              const t = Math.max(0, (depthBelowRoad - (roadEdge - 3)) / 3);
+              const s = t * t * (3 - 2 * t);
+              r = roadR * (1 - s) + vergeR * s;
+              g = roadG * (1 - s) + vergeG * s;
+              b = roadB * (1 - s) + vergeB * s;
+            } else if (depthBelowRoad < cliffEdge) {
+              const t = Math.max(0, (depthBelowRoad - grassEdgeDepth) / Math.max(2, cliffEdge - grassEdgeDepth));
+              const s = Math.min(1, t * t * (3 - 2 * t));
+              r = vergeR * (1 - s) + cliffR * s;
+              g = vergeG * (1 - s) + cliffG * s;
+              b = vergeB * (1 - s) + cliffB * s;
             } else {
-              // ── 3D-Normal-Lit Fractured Granite & Sedimentary Cliff Wall ──
-              const strataWave = Math.sin((ly + minY) * 0.11 + nMacro * 7 + wx * 0.008);
-              const nMacroNextX = fbm2D((wx + 2) * 0.018, (ly + minY) * 0.022, 3, 401);
-              const nMacroNextY = fbm2D(wx * 0.018, (ly + 2 + minY) * 0.022, 3, 401);
-
-              // Compute 3D cliff normal
-              const dHdx = (nMacroNextX - nMacro) * 16 + (nFine - 0.5) * 0.9;
-              const dHdy = (nMacroNextY - nMacro) * 14 + strataWave * 0.45;
-              const invLen = 1 / Math.sqrt(dHdx * dHdx + dHdy * dHdy + 1);
-              const nx = dHdx * invLen;
-              const ny = dHdy * invLen;
-              const nz = invLen;
-
-              const diff = Math.max(0.12, nx * sunX + ny * sunY + nz * sunZ);
-              const ao = Math.min(1, (depthBelowRoad - 22) / 28) * 0.35 + 0.65;
-              const deepFade = Math.max(0.22, 1 - depthBelowRoad / 360);
-              const light = diff * ao * deepFade * (0.85 + nFine * 0.3);
-
-              // Blend warm brown-grey loam near top with cool fractured slate/granite deeper down
-              const rockBlend = Math.min(1, (depthBelowRoad - 24) / 55);
-              const baseR = 116 * (1 - rockBlend) + 104 * rockBlend + strataWave * 10;
-              const baseG = 90 * (1 - rockBlend) + 98 * rockBlend + strataWave * 8;
-              const baseB = 68 * (1 - rockBlend) + 94 * rockBlend + strataWave * 6;
-
-              r = baseR * light;
-              g = baseG * light;
-              b = baseB * light;
-
-              // Moss clinging to upward-facing rock ledges near the upper cliff
-              if (ny < -0.18 && depthBelowRoad < 130) {
-                const mossAmt = Math.min(0.75, (-ny - 0.18) * 2.2 * (1 - depthBelowRoad / 130));
-                r = r * (1 - mossAmt) + 54 * light * 1.3 * mossAmt;
-                g = g * (1 - mossAmt) + 88 * light * 1.3 * mossAmt;
-                b = b * (1 - mossAmt) + 38 * light * 1.3 * mossAmt;
-              }
+              r = cliffR;
+              g = cliffG;
+              b = cliffB;
             }
 
             data[idx] = Math.min(255, Math.max(0, r));
@@ -235,7 +241,7 @@ export default class Terrain {
   }
 
   /**
-   * Draws realistic weathered timber posts and galvanized steel guardrails along hilly stretches.
+   * Draws realistic weathered timber posts and galvanized steel guardrails firmly anchored into the ground.
    */
   drawRoadsideGuardrails() {
     const g = this.scene.add.graphics();
@@ -255,13 +261,13 @@ export default class Terrain {
         const y = this.getHeightAtX(x);
         postPoints.push({ x, y });
 
-        // Weathered timber post with 3D light/shadow face
+        // Weathered timber post extending deep into the ground so it never floats
         g.fillStyle(0x2b1e16, 1);
-        g.fillRect(x - 3, y - 22, 6, 25);
+        g.fillRect(x - 3, y - 22, 6, 36);
         g.fillStyle(0x543d2c, 1);
-        g.fillRect(x - 3, y - 22, 2.5, 25);
+        g.fillRect(x - 3, y - 22, 2.5, 36);
 
-        // Reflective red/white roadside delineator tab on post
+        // Reflective red roadside delineator tab on post
         g.fillStyle(0xd32f2f, 0.9);
         g.fillRect(x - 1.5, y - 19, 3, 4);
       }
@@ -305,8 +311,8 @@ export default class Terrain {
       for (let b = 0; b < count; b++) {
         const t = (b + rng() * 0.8) / count;
         const bx = p1.x + (p2.x - p1.x) * t;
-        const by = p1.y + (p2.y - p1.y) * t + 9 + rng() * 4;
-        const bh = 6 + rng() * 13;
+        const by = p1.y + (p2.y - p1.y) * t + 11 + rng() * 3;
+        const bh = 6 + rng() * 12;
         const lean = (rng() - 0.42) * 8;
 
         const rCol = rootColors[Math.floor(rng() * rootColors.length)];
@@ -348,7 +354,7 @@ export default class Terrain {
   drawRock(x, y, r, seed) {
     const pad = 16;
     const size = Math.ceil((r + pad) * 2);
-    const key = `boulder-ultra-v2-${seed}-${r}`;
+    const key = `boulder-ultra-v3-${seed}-${r}`;
 
     getOrCreateCanvasTexture(this.scene, key, size, size, (ctx, w, h) => {
       const cx = w / 2;

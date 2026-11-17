@@ -2,26 +2,29 @@ export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 
 export const PHYSICS = {
-  GRAVITY_Y: 0.9,       // Lighter gravity 
+  GRAVITY_Y: 0.95,      // Grounded, realistic gravity
   BUGGY: {
-    MASS: 25,            // Lighter
+    MASS: 28,           // Solid chassis mass for stability
     FRICTION: 0.15,
-    RESTITUTION: 0.04,
+    RESTITUTION: 0.02,  // Minimal bounce on hard impacts
   },
   WHEEL: {
-    MASS: 6,
-    FRICTION: 1.0,       // Maximum grip
-    RESTITUTION: 0.1,
-    DENSITY: 0.03
+    MASS: 8,            // Heavier wheels keep the buggy planted
+    FRICTION: 1.25,     // High-grip off-road mud-terrain traction
+    RESTITUTION: 0.05,  // Absorbs bumps without bouncing
+    DENSITY: 0.04
   },
   SUSPENSION: {
-    STIFFNESS: 0.14,
-    DAMPING: 0.3,        // More damping = stable landings
+    STIFFNESS: 0.18,    // Firm, responsive off-road coilovers
+    DAMPING: 0.38,      // Strong damping prevents oscillation
     LENGTH: 10
   },
   CONTROLS: {
-    SPEED: 0.18,         // More torque for climbing
-    AIR_ROTATION: 0.04
+    SPEED: 0.28,        // Strong wheel angular velocity
+    TORQUE_FORCE: 0.016,// Direct traction thrust for strong hill climbing
+    BRAKE_DECEL: 0.88,  // Fast, responsive braking when reversing direction
+    MAX_SPEED: 14,      // Controlled top speed
+    AIR_ROTATION: 0.055 // Strong pitch control in mid-air
   }
 };
 
@@ -41,10 +44,10 @@ export const DEPTH = {
 
 export const COLORS = {
   // Atmospheric sky gradient (zenith -> horizon)
-  SKY_TOP: '#1a4c80',
-  SKY_MID: '#4b86be',
-  SKY_LOWER: '#9bc4e2',
-  SKY_BOTTOM: '#e3edf2',
+  SKY_TOP: '#103466',
+  SKY_MID: '#27629e',
+  SKY_LOWER: '#6ca2cf',
+  SKY_BOTTOM: '#e8ece6',
 
   // Realistic alpine & foothill mountain palette
   MOUNTAIN_FAR: 0x678099,
@@ -71,7 +74,7 @@ export const COLORS = {
   DIRT_TOP: 0x614736,
   DIRT_MID: 0x4a3527,
   DIRT_BOTTOM: 0x36261b,
-  BEDROCK: 0x241912,
+  BEDROCK: 0x181411,
 
   // Buggy metallic & off-road palette
   BUGGY_BODY: 0xc62828,

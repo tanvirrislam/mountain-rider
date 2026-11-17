@@ -12,7 +12,7 @@ export default class Buggy {
     const wheelOffsetX = 50;
     const wheelOffsetY = 18;
 
-    // Chassis Physics (unchanged)
+    // Chassis Physics
     this.chassis = scene.matter.add.rectangle(x, y, chassisW, chassisH, {
       mass: PHYSICS.BUGGY.MASS,
       friction: PHYSICS.BUGGY.FRICTION,
@@ -22,9 +22,10 @@ export default class Buggy {
       plugin: {}
     });
 
-    scene.matter.body.setCentre(this.chassis, { x: 0, y: 6 }, true);
+    // Lower center of mass for strong stability on hills and jumps
+    scene.matter.body.setCentre(this.chassis, { x: 0, y: 7 }, true);
 
-    // Wheels Physics (unchanged)
+    // Wheels Physics
     const wheelOpts = {
       mass: PHYSICS.WHEEL.MASS,
       friction: PHYSICS.WHEEL.FRICTION,
@@ -35,7 +36,7 @@ export default class Buggy {
     this.wheelA = scene.matter.add.circle(x - wheelOffsetX, y + wheelOffsetY, wheelRadius, wheelOpts);
     this.wheelB = scene.matter.add.circle(x + wheelOffsetX, y + wheelOffsetY, wheelRadius, wheelOpts);
 
-    // Suspension Physics (unchanged)
+    // Suspension Physics
     const stiff = PHYSICS.SUSPENSION.STIFFNESS;
     const damp = PHYSICS.SUSPENSION.DAMPING;
     const len = PHYSICS.SUSPENSION.LENGTH;
@@ -75,16 +76,16 @@ export default class Buggy {
   }
 
   /**
-   * Renders a photorealistic 3D-shaded off-road desert/mountain buggy chassis
-   * with automotive metallic paint, carbon-fiber lower trim, cockpit driver,
-   * tubular steel roll cage, rear twin-cam engine, and volumetric headlight beam.
+   * Renders a photorealistic 3D-shaded off-road mountain buggy chassis
+   * with automotive metallic paint, brushed aluminum skid plate, cockpit driver,
+   * tubular steel roll cage, and rear twin-cam engine.
    */
   createChassisTexture(scene, w, h) {
-    const texW = 240;
-    const texH = 120;
-    const cx = 105; // Chassis physics center X on canvas
-    const cy = 72;  // Chassis physics center Y on canvas
-    const key = 'buggy-chassis-ultra-v2';
+    const texW = 190;
+    const texH = 110;
+    const cx = 100; // Chassis physics center X on canvas
+    const cy = 68;  // Chassis physics center Y on canvas
+    const key = 'buggy-chassis-ultra-v3';
 
     getOrCreateCanvasTexture(scene, key, texW, texH, (ctx) => {
       ctx.save();
@@ -98,20 +99,7 @@ export default class Buggy {
       ctx.fillStyle = underShd;
       ctx.fillRect(-w / 2 - 18, 2, w + 36, 24);
 
-      // 2. Volumetric warm halogen headlight beam cone projecting right
-      const beamGrd = ctx.createLinearGradient(w / 2, -6, w / 2 + 72, 8);
-      beamGrd.addColorStop(0, 'rgba(255, 248, 210, 0.42)');
-      beamGrd.addColorStop(0.5, 'rgba(255, 244, 190, 0.14)');
-      beamGrd.addColorStop(1, 'rgba(255, 244, 190, 0)');
-      ctx.fillStyle = beamGrd;
-      ctx.beginPath();
-      ctx.moveTo(w / 2 + 2, -h / 2 + 2);
-      ctx.lineTo(w / 2 + 72, -h / 2 - 18);
-      ctx.lineTo(w / 2 + 72, h / 2 + 16);
-      ctx.closePath();
-      ctx.fill();
-
-      // 3. Rear Exposed Engine Block, Cooling Fins & Heat-Blued Chrome Exhaust
+      // 2. Rear Exposed Engine Block, Cooling Fins & Heat-Blued Chrome Exhaust
       const engGrd = ctx.createLinearGradient(-w / 2 - 18, -h / 2 - 10, -w / 2 + 6, h / 2);
       engGrd.addColorStop(0, '#6e767e');
       engGrd.addColorStop(0.5, '#3b4046');
@@ -146,7 +134,7 @@ export default class Buggy {
       ctx.arc(-w / 2 - 21, -h / 2 + 4.2, 2.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // 4. Cockpit Interior, Racing Seat & Driver with Helmet
+      // 3. Cockpit Interior, Racing Seat & Driver with Helmet
       const cabStartX = -15;
       const cabWidth = 55;
       const cabHeight = 30;
@@ -165,12 +153,11 @@ export default class Buggy {
       // Driver racing bucket seat & helmeted silhouette
       ctx.fillStyle = '#262a2e';
       ctx.fillRect(cabStartX + 10, cabY - 18, 7, 17);
-      // Driver torso
       ctx.fillStyle = '#1e242b';
       ctx.beginPath();
       ctx.ellipse(cabStartX + 19, cabY - 6, 7, 9, 0.2, 0, Math.PI * 2);
       ctx.fill();
-      // White/red racing helmet + dark visor
+
       const helmGrd = ctx.createRadialGradient(cabStartX + 19, cabY - 20, 1, cabStartX + 20, cabY - 18, 7);
       helmGrd.addColorStop(0, '#ffffff');
       helmGrd.addColorStop(0.7, '#d0d5da');
@@ -184,7 +171,7 @@ export default class Buggy {
       ctx.ellipse(cabStartX + 23.5, cabY - 17.5, 3.2, 2.2, 0.1, 0, Math.PI * 2);
       ctx.fill();
 
-      // 5. Tinted Polycarbonate Windshield with Sky Reflection
+      // 4. Tinted Polycarbonate Windshield with Sky Reflection
       const winGrd = ctx.createLinearGradient(0, cabY - cabHeight, 0, cabY);
       winGrd.addColorStop(0, 'rgba(165, 212, 245, 0.62)');
       winGrd.addColorStop(0.45, 'rgba(62, 98, 128, 0.45)');
@@ -208,7 +195,7 @@ export default class Buggy {
       ctx.closePath();
       ctx.fill();
 
-      // 6. 3D Chromoly Tubular Roll Cage
+      // 5. 3D Chromoly Tubular Roll Cage
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       const drawTube = (x1, y1, x2, y2, width = 4.5) => {
@@ -227,7 +214,6 @@ export default class Buggy {
         ctx.stroke();
       };
 
-      // Rear triangulation & roof cage bars
       drawTube(cabStartX - 28, cabY, cabStartX - 14, cabY - 20, 4);
       drawTube(cabStartX, cabY, cabStartX - 14, cabY - 20, 4);
       drawTube(cabStartX - 14, cabY - 20, cabStartX + 6, cabY - cabHeight, 4);
@@ -236,13 +222,13 @@ export default class Buggy {
       drawTube(cabStartX + cabWidth - 2, cabY, cabStartX + cabWidth - 16, cabY - cabHeight, 4.5);
       drawTube(cabStartX + 4, cabY - cabHeight, cabStartX + cabWidth - 14, cabY - cabHeight, 5);
 
-      // 7. Automotive Metallic Clearcoat Main Chassis Body
+      // 6. Automotive Metallic Clearcoat Main Chassis Body
       const bodyGrd = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
-      bodyGrd.addColorStop(0.0, '#ff6659');  // Sunlit top clearcoat reflection
-      bodyGrd.addColorStop(0.18, '#e53935'); // Bright metallic red
-      bodyGrd.addColorStop(0.55, '#b71c1c'); // Deep crimson core
-      bodyGrd.addColorStop(0.85, '#6e0e0e'); // Lower curve shadow
-      bodyGrd.addColorStop(1.0, '#2b0909');  // Undercarriage ambient occlusion
+      bodyGrd.addColorStop(0.0, '#ff6659');
+      bodyGrd.addColorStop(0.18, '#e53935');
+      bodyGrd.addColorStop(0.55, '#b71c1c');
+      bodyGrd.addColorStop(0.85, '#6e0e0e');
+      bodyGrd.addColorStop(1.0, '#2b0909');
       ctx.fillStyle = bodyGrd;
       ctx.beginPath();
       ctx.roundRect(-w / 2, -h / 2, w, h, 8);
@@ -273,13 +259,13 @@ export default class Buggy {
       ctx.lineTo(34, h / 2 - 4);
       ctx.stroke();
 
-      // 8. Heavy-Duty Tubular Front Bullbar
+      // 7. Heavy-Duty Tubular Front Bullbar
       drawTube(w / 2 - 5, 5, w / 2 + 10, 5, 4);
       drawTube(w / 2 + 10, 5, w / 2 + 15, -5, 4);
       drawTube(w / 2 + 15, -5, w / 2 + 8, -15, 4);
       drawTube(w / 2 + 8, -15, w / 2 - 5, -10, 4);
 
-      // 9. Sculpted Mudguard Fenders over Wheel Wells
+      // 8. Sculpted Mudguard Fenders over Wheel Wells
       for (const fx of [-50, 50]) {
         ctx.strokeStyle = '#121417';
         ctx.lineWidth = 7.5;
@@ -294,7 +280,7 @@ export default class Buggy {
         ctx.stroke();
       }
 
-      // 10. Projector Halogen Headlight & LED Tail Light
+      // 9. Projector Halogen Headlight & LED Tail Light
       ctx.fillStyle = '#22262a';
       ctx.beginPath();
       ctx.roundRect(w / 2 - 4, -h / 2 - 4, 10, 12, 3);
@@ -323,7 +309,6 @@ export default class Buggy {
     });
 
     const sprite = scene.add.image(0, 0, key);
-    // Align origin with physics body center (cx=105, cy=72)
     sprite.setOrigin(cx / texW, cy / texH);
     return sprite;
   }
@@ -334,7 +319,7 @@ export default class Buggy {
    */
   createWheelTexture(scene, r) {
     const size = (r + 6) * 2;
-    const key = `buggy-wheel-ultra-v2-${r}`;
+    const key = `buggy-wheel-ultra-v3-${r}`;
 
     getOrCreateCanvasTexture(scene, key, size, size, (ctx, w, h) => {
       const cx = w / 2;
@@ -404,14 +389,12 @@ export default class Buggy {
       rimGrd.addColorStop(0.8, '#474d54');
       rimGrd.addColorStop(1.0, '#cbd2d9');
 
-      // Outer alloy beadlock lip
       ctx.strokeStyle = rimGrd;
       ctx.lineWidth = 2.8;
       ctx.beginPath();
       ctx.arc(0, 0, r * 0.58, 0, Math.PI * 2);
       ctx.stroke();
 
-      // 5 machined spokes
       ctx.lineCap = 'round';
       for (let s = 0; s < 5; s++) {
         const ang = (s / 5) * Math.PI * 2 - Math.PI / 2;
@@ -525,34 +508,71 @@ export default class Buggy {
     this.drawSuspensionStruts();
 
     const currentAngle = this.chassis.angle;
-    const correctionStrength = 0.002;
-    const angularDamping = 0.04;
+    const correctionStrength = 0.0038;
+    const angularDamping = 0.065;
 
-    // Apply a restoring torque proportional to current tilt
+    // Strong active pitch stabilization so the car stays planted and responsive
     MBody.setAngularVelocity(
       this.chassis,
       this.chassis.angularVelocity * (1 - angularDamping) - currentAngle * correctionStrength
     );
 
-    // Input
+    // Strong, responsive 4x4 drive controls
     const accel = PHYSICS.CONTROLS.SPEED;
+    const torqueForce = PHYSICS.CONTROLS.TORQUE_FORCE;
+    const brakeDecel = PHYSICS.CONTROLS.BRAKE_DECEL;
+    const maxSpeed = PHYSICS.CONTROLS.MAX_SPEED;
     const airRot = PHYSICS.CONTROLS.AIR_ROTATION;
     this.isAccelerating = false;
 
-    if (this.cursors.right.isDown || this.keys.D.isDown) {
+    const driveForward = this.cursors.right.isDown || this.keys.D.isDown || this.cursors.up.isDown || this.keys.W.isDown;
+    const driveReverse = this.cursors.left.isDown || this.keys.A.isDown || this.cursors.down.isDown || this.keys.S.isDown;
+
+    const vx = this.chassis.velocity.x;
+    const vy = this.chassis.velocity.y;
+    const cos = Math.cos(currentAngle);
+    const sin = Math.sin(currentAngle);
+
+    if (driveForward) {
+      // Strong active braking if currently rolling backward
+      if (vx < -0.5) {
+        MBody.setVelocity(this.chassis, { x: vx * brakeDecel, y: vy });
+      }
       MBody.setAngularVelocity(this.wheelA, accel);
       MBody.setAngularVelocity(this.wheelB, accel);
+
+      // Direct forward climbing thrust when below max speed and reasonably upright
+      if (vx < maxSpeed && Math.abs(currentAngle) < 1.05) {
+        MBody.applyForce(this.chassis, this.chassis.position, {
+          x: cos * torqueForce,
+          y: sin * torqueForce,
+        });
+      }
+
+      // Nose-down pitch control to keep front wheels planted on steep climbs
       MBody.setAngularVelocity(
         this.chassis,
-        this.chassis.angularVelocity + airRot * 0.06
+        this.chassis.angularVelocity + airRot * 0.055
       );
       this.isAccelerating = true;
-    } else if (this.cursors.left.isDown || this.keys.A.isDown) {
+    } else if (driveReverse) {
+      // Strong active braking if currently rolling forward
+      if (vx > 0.5) {
+        MBody.setVelocity(this.chassis, { x: vx * brakeDecel, y: vy });
+      }
       MBody.setAngularVelocity(this.wheelA, -accel);
       MBody.setAngularVelocity(this.wheelB, -accel);
+
+      if (vx > -maxSpeed * 0.75 && Math.abs(currentAngle) < 1.05) {
+        MBody.applyForce(this.chassis, this.chassis.position, {
+          x: -cos * torqueForce * 0.85,
+          y: -sin * torqueForce * 0.85,
+        });
+      }
+
       MBody.setAngularVelocity(
         this.chassis,
-        this.chassis.angularVelocity - airRot * 0.06
+        this.chassis.angularVelocity - airRot * 0.055
       );
       this.isAccelerating = true;
     }
