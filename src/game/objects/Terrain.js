@@ -1,5 +1,11 @@
-import Phaser from 'phaser'
-import { DEPTH, COLORS } from '../utils/constants'
+import Phaser from 'phaser';
+import { DEPTH, COLORS } from '../utils/constants';
+import {
+  createRng,
+  valueNoise2D,
+  fbm2D,
+  getOrCreateCanvasTexture,
+} from '../utils/scenery';
 
 export default class Terrain {
   constructor(scene) {
@@ -16,37 +22,33 @@ export default class Terrain {
     this.addFinishZone();
   }
 
-  // Generate height-map points
+  // Generate height-map points (unchanged for identical physics & gameplay)
   generateTerrain() {
     const startY = 500;
-    const finishZoneStart = this.terrainWidth - 500; // Last 500px is flat finish
+    const finishZoneStart = this.terrainWidth - 500;
 
     for (let x = 0; x <= this.terrainWidth; x += this.segmentLength) {
-      // Calculate hills value
       const hillY = startY
         + Math.sin(x / 350) * 60
         + Math.sin(x / 180) * 30
         + Math.cos(x / 90) * 10
-        + (Math.random() - 0.5) * 4;
+        + (Math.sin(x * 0.37) * 1.8);
 
       let y;
 
       if (x < 400) {
-        // Flat starting zone
         y = startY;
       } else if (x < 800) {
-        // Smooth blend into hills
         const t = (x - 400) / 400;
         const ease = t * t * (3 - 2 * t);
         y = startY + (hillY - startY) * ease;
       } else if (x >= finishZoneStart) {
-        // Smooth blend back to flat for finish zone
         const lastHillY = this.points.length > 0 ? this.points[this.points.length - 1].y : startY;
         if (x === finishZoneStart) {
           this._finishBlendStart = lastHillY;
         }
         const blendStart = this._finishBlendStart || startY;
-        const t = (x - finishZoneStart) / 200; // Blend over 200px
+        const t = (x - finishZoneStart) / 200;
         const ease = Math.min(1, t * t * (3 - 2 * t));
         y = blendStart + (startY - blendStart) * ease;
       } else {
@@ -58,214 +60,159 @@ export default class Terrain {
     }
   }
 
-  // Draw terrain with realistic stratified earth, mountain road, and natural grass
+  /**
+   * Renders ultra-realistic 3D-shaded road, geological rock/soil cliff cutaway,
+   * roadside guardrails, and lush meadow grass + wildflowers.
+   */
   drawTerrain() {
     const pts = this.points;
     const bottom = 1200;
 
-    // 1. Deep bedrock fill
-    const bedrock = this.scene.add.graphics();
-    bedrock.fillStyle(COLORS.BEDROCK, 1);
-    bedrock.beginPath();
-    bedrock.moveTo(pts[0].x, pts[0].y + 95);
-    for (const p of pts) bedrock.lineTo(p.x, p.y + 95);
-    bedrock.lineTo(this.terrainWidth, bottom);
-    bedrock.lineTo(0, bottom);
-    bedrock.closePath();
-    bedrock.fillPath();
-    bedrock.setDepth(DEPTH.TERRAIN_BG);
+    // 1. Deep abyssal bedrock fill below canvas slices
+    const deepBedrock = this.scene.add.graphics();
+    deepBedrock.fillStyle(0x14100d, 1);
+    deepBedrock.beginPath();
+    deepBedrock.moveTo(pts[0].x, pts[0].y + 180);
+    for (const p of pts) deepBedrock.lineTo(p.x, p.y + 180);
+    deepBedrock.lineTo(this.terrainWidth, bottom);
+    deepBedrock.lineTo(0, bottom);
+    deepBedrock.closePath();
+    deepBedrock.fillPath();
+    deepBedrock.setDepth(DEPTH.TERRAIN_BG);
 
-    // 2. Rocky subsoil layer with organic wavy boundary
-    const subsoil = this.scene.add.graphics();
-    subsoil.fillStyle(COLORS.DIRT_BOTTOM, 1);
-    subsoil.beginPath();
-    subsoil.moveTo(pts[0].x, pts[0].y + 48);
-    for (let i = 0; i < pts.length; i++) {
-      const wave = Math.sin(i * 0.7) * 5;
-      subsoil.lineTo(pts[i].x, pts[i].y + 48 + wave);
-    }
-    for (let i = pts.length - 1; i >= 0; i--) {
-      const wave = Math.cos(i * 0.5) * 7;
-      subsoil.lineTo(pts[i].x, pts[i].y + 102 + wave);
-    }
-    subsoil.closePath();
-    subsoil.fillPath();
-    subsoil.setDepth(DEPTH.TERRAIN_BG + 0.25);
+    // 2. Per-pixel 3D normal-lit geological cliff + gravel/asphalt roadbed slices
+    const sliceW = 1900;
+    const minY = 270;
+    const maxY = 830;
+    const sliceH = maxY - minY;
 
-    // 3. Rich loam mid-layer
-    const loam = this.scene.add.graphics();
-    loam.fillStyle(COLORS.DIRT_MID, 1);
-    loam.beginPath();
-    loam.moveTo(pts[0].x, pts[0].y + 20);
-    for (let i = 0; i < pts.length; i++) {
-      const wave = Math.cos(i * 0.6) * 3;
-      loam.lineTo(pts[i].x, pts[i].y + 20 + wave);
-    }
-    for (let i = pts.length - 1; i >= 0; i--) {
-      const wave = Math.sin(i * 0.7) * 5;
-      loam.lineTo(pts[i].x, pts[i].y + 52 + wave);
-    }
-    loam.closePath();
-    loam.fillPath();
-    loam.setDepth(DEPTH.TERRAIN_BG + 0.5);
+    for (let sIdx = 0; sIdx < 2; sIdx++) {
+      const startX = sIdx * sliceW;
+      const key = `terrain-ultra-slice-v2-${sIdx}`;
 
-    // 4. Organic topsoil layer
-    const topsoil = this.scene.add.graphics();
-    topsoil.fillStyle(COLORS.DIRT_TOP, 1);
-    topsoil.beginPath();
-    topsoil.moveTo(pts[0].x, pts[0].y + 6);
-    for (let i = 0; i < pts.length; i++) topsoil.lineTo(pts[i].x, pts[i].y + 6);
-    for (let i = pts.length - 1; i >= 0; i--) {
-      const wave = Math.cos(i * 0.6) * 3;
-      topsoil.lineTo(pts[i].x, pts[i].y + 24 + wave);
-    }
-    topsoil.closePath();
-    topsoil.fillPath();
-    topsoil.setDepth(DEPTH.TERRAIN_BG + 0.7);
+      getOrCreateCanvasTexture(this.scene, key, sliceW, sliceH, (ctx, w, h) => {
+        const imgData = ctx.createImageData(w, h);
+        const data = imgData.data;
 
-    // 5. Soil strata lines, fissures, and rootlets
-    const soilTex = this.scene.add.graphics();
-    soilTex.setDepth(DEPTH.TERRAIN_BG + 0.85);
-    for (let i = 0; i < pts.length - 1; i += 2) {
-      const p = pts[i];
-      // Subtle strata grain
-      soilTex.lineStyle(1.5, 0x2c1e15, 0.28);
-      const ly1 = p.y + 26 + Math.random() * 18;
-      soilTex.lineBetween(p.x, ly1, p.x + this.segmentLength * 1.6, ly1 + (Math.random() - 0.5) * 5);
-
-      soilTex.lineStyle(1, 0x1e130d, 0.25);
-      const ly2 = p.y + 58 + Math.random() * 26;
-      soilTex.lineBetween(p.x, ly2, p.x + this.segmentLength * 2.1, ly2 + (Math.random() - 0.5) * 6);
-
-      // Fine rootlets near surface
-      if (Math.random() > 0.55) {
-        soilTex.lineStyle(1.2, 0x70533f, 0.35);
-        const rx = p.x + Math.random() * 28;
-        const ry = p.y + 10 + Math.random() * 8;
-        soilTex.lineBetween(rx, ry, rx + (Math.random() - 0.3) * 14, ry + 5 + Math.random() * 9);
-      }
-    }
-
-    // 6. Embedded angular stones & pebbles in subsoil
-    const pebbles = this.scene.add.graphics();
-    pebbles.setDepth(DEPTH.TERRAIN_BG + 0.95);
-    for (let i = 0; i < pts.length - 1; i += 2) {
-      const p = pts[i];
-      for (let j = 0; j < 3; j++) {
-        const px = p.x + Math.random() * this.segmentLength * 2;
-        const py = p.y + 16 + Math.random() * 68;
-        const pr = 1.8 + Math.random() * 3.8;
-        const pColor = Math.random() > 0.45 ? COLORS.ROCK_DARK : COLORS.PEBBLE;
-        pebbles.fillStyle(pColor, 0.55);
-        pebbles.fillEllipse(px, py, pr * 2.2, pr * 1.4);
-        // Upper-left highlight on embedded stone
-        pebbles.fillStyle(COLORS.ROCK_LIGHT, 0.25);
-        pebbles.fillEllipse(px - pr * 0.25, py - pr * 0.25, pr * 1.1, pr * 0.6);
-      }
-    }
-
-    // 7. Compacted mountain dirt/gravel roadbed along the top surface
-    const road = this.scene.add.graphics();
-    road.setDepth(DEPTH.TERRAIN_FG);
-
-    // Road base fill (compacted earth/gravel)
-    road.fillStyle(COLORS.ROAD_MID, 1);
-    road.beginPath();
-    road.moveTo(pts[0].x, pts[0].y - 1);
-    for (let i = 0; i < pts.length; i++) road.lineTo(pts[i].x, pts[i].y - 1);
-    for (let i = pts.length - 1; i >= 0; i--) road.lineTo(pts[i].x, pts[i].y + 11);
-    road.closePath();
-    road.fillPath();
-
-    // Sunlit dusty upper road surface
-    road.lineStyle(5, COLORS.ROAD_TOP, 0.95);
-    road.beginPath();
-    road.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) road.lineTo(pts[i].x, pts[i].y);
-    road.strokePath();
-
-    // Darker compacted tire rut / worn track line
-    road.lineStyle(2.5, COLORS.ROAD_RUT, 0.65);
-    road.beginPath();
-    road.moveTo(pts[0].x, pts[0].y + 3);
-    for (let i = 1; i < pts.length; i++) road.lineTo(pts[i].x, pts[i].y + 3);
-    road.strokePath();
-
-    // Fine surface gravel specks on the road
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      for (let gIdx = 0; gIdx < 3; gIdx++) {
-        const t = Math.random();
-        const gx = p1.x + (p2.x - p1.x) * t;
-        const gy = p1.y + (p2.y - p1.y) * t + Math.random() * 5;
-        road.fillStyle(Math.random() > 0.5 ? COLORS.PEBBLE_LIGHT : COLORS.ROCK_DARK, 0.6);
-        road.fillCircle(gx, gy, 0.9 + Math.random() * 1.1);
-      }
-    }
-
-    // 8. Natural grassy verge & shoulder hugging the road edge
-    const grassVerge = this.scene.add.graphics();
-    grassVerge.setDepth(DEPTH.TERRAIN_FG + 0.5);
-
-    grassVerge.fillStyle(COLORS.GRASS_DARK, 0.92);
-    grassVerge.beginPath();
-    grassVerge.moveTo(pts[0].x, pts[0].y + 5);
-    for (let i = 0; i < pts.length; i++) {
-      grassVerge.lineTo(pts[i].x, pts[i].y + 5 + Math.sin(i * 1.3) * 1.5);
-    }
-    for (let i = pts.length - 1; i >= 0; i--) {
-      grassVerge.lineTo(pts[i].x, pts[i].y + 15 + Math.cos(i * 0.9) * 3);
-    }
-    grassVerge.closePath();
-    grassVerge.fillPath();
-
-    grassVerge.lineStyle(3.5, COLORS.GRASS_MID, 0.9);
-    grassVerge.beginPath();
-    grassVerge.moveTo(pts[0].x, pts[0].y + 5);
-    for (let i = 1; i < pts.length; i++) {
-      grassVerge.lineTo(pts[i].x, pts[i].y + 5 + Math.sin(i * 1.3) * 1.2);
-    }
-    grassVerge.strokePath();
-
-    // 9. Realistic dense grass tufts, dry stalks & tiny wildflowers along the verge
-    const blades = this.scene.add.graphics();
-    blades.setDepth(DEPTH.TERRAIN_FG + 1);
-    const bladeColors = [0x3d6627, 0x4f7c33, 0x628f40, 0x769f4e, 0x8a9c4b];
-    const finishStart = this.terrainWidth - 350;
-
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      // Keep the asphalt/gravel finish pad mostly clear of tall grass
-      const isFinishPad = p1.x >= finishStart;
-      const tuftCount = isFinishPad ? 1 : 6;
-
-      for (let b = 0; b < tuftCount; b++) {
-        const t = (b + Math.random() * 0.7) / tuftCount;
-        const bx = p1.x + (p2.x - p1.x) * t;
-        const by = p1.y + (p2.y - p1.y) * t + 3;
-        const bh = 4 + Math.random() * 11;
-        const lean = (Math.random() - 0.45) * 7;
-        const color = bladeColors[Math.floor(Math.random() * bladeColors.length)];
-
-        blades.lineStyle(1.3, color, 0.85);
-        blades.beginPath();
-        blades.moveTo(bx, by);
-        blades.lineTo(bx + lean * 0.4, by - bh * 0.55);
-        blades.lineTo(bx + lean, by - bh);
-        blades.strokePath();
-
-        // Occasional tiny wildflower / clover accent
-        if (!isFinishPad && Math.random() > 0.93) {
-          const flowerColor = Math.random() > 0.5 ? 0xf5e9a6 : 0xe8eef2;
-          blades.fillStyle(flowerColor, 0.85);
-          blades.fillCircle(bx + lean, by - bh - 1, 1.4);
+        const surfY = new Float32Array(w);
+        for (let lx = 0; lx < w; lx++) {
+          surfY[lx] = this.getHeightAtX(startX + lx) - minY;
         }
-      }
+
+        // Upper-left sunlight vector
+        const sunX = -0.62;
+        const sunY = -0.58;
+        const sunZ = 0.53;
+
+        for (let lx = 0; lx < w; lx++) {
+          const wx = startX + lx;
+          const topY = surfY[lx];
+          const topYNext = surfY[Math.min(w - 1, lx + 1)];
+          const roadSlope = topYNext - topY;
+          const yStart = Math.max(0, Math.floor(topY - 2));
+
+          for (let ly = yStart; ly < h; ly++) {
+            const depthBelowRoad = ly - topY;
+            if (depthBelowRoad < -1.5) continue;
+
+            const idx = (ly * w + lx) * 4;
+            const edgeAlpha = depthBelowRoad < 0 ? Math.max(0, 1 + depthBelowRoad / 1.5) : 1;
+
+            // Coarse & fine procedural noise for road gravel, soil & fractured rock
+            const nMacro = fbm2D(wx * 0.018, (ly + minY) * 0.022, 3, 401);
+            const nMed = valueNoise2D(wx * 0.08, (ly + minY) * 0.09, 509);
+            const nFine = valueNoise2D(wx * 0.35, (ly + minY) * 0.35, 613);
+
+            let r;
+            let g;
+            let b;
+
+            if (depthBelowRoad < 12) {
+              // ── Compacted Mountain Gravel & Macadam Road Surface ──
+              const crown = Math.sin((depthBelowRoad / 12) * Math.PI);
+              const tireRut = (depthBelowRoad > 2.5 && depthBelowRoad < 6.5) ? 0.84 : 1.0;
+              const gravelSpeck = (nFine - 0.5) * 34 + (nMed - 0.5) * 20;
+              const slopeShade = Math.max(0.75, Math.min(1.18, 1 - roadSlope * 0.22));
+
+              r = (118 * crown * tireRut + gravelSpeck) * slopeShade;
+              g = (102 * crown * tireRut + gravelSpeck * 0.9) * slopeShade;
+              b = (86 * crown * tireRut + gravelSpeck * 0.8) * slopeShade;
+            } else if (depthBelowRoad < 26 + (nMacro - 0.5) * 10) {
+              // ── Lush Grassy Overhang & Root-Rich Humus Topsoil ──
+              const localT = (depthBelowRoad - 12) / 14;
+              const grassMix = Math.max(0, 1 - localT * 1.45 + (nMed - 0.5) * 0.45);
+              const soilShade = 0.65 + nMed * 0.45 + (nFine - 0.5) * 0.25;
+
+              const grassR = (46 + nFine * 32) * (1 - roadSlope * 0.15);
+              const grassG = (82 + nFine * 44) * (1 - roadSlope * 0.15);
+              const grassB = (30 + nFine * 18);
+
+              const humusR = 68 * soilShade;
+              const humusG = 48 * soilShade;
+              const humusB = 34 * soilShade;
+
+              r = humusR * (1 - grassMix) + grassR * grassMix;
+              g = humusG * (1 - grassMix) + grassG * grassMix;
+              b = humusB * (1 - grassMix) + grassB * grassMix;
+            } else {
+              // ── 3D-Normal-Lit Fractured Granite & Sedimentary Cliff Wall ──
+              const strataWave = Math.sin((ly + minY) * 0.11 + nMacro * 7 + wx * 0.008);
+              const nMacroNextX = fbm2D((wx + 2) * 0.018, (ly + minY) * 0.022, 3, 401);
+              const nMacroNextY = fbm2D(wx * 0.018, (ly + 2 + minY) * 0.022, 3, 401);
+
+              // Compute 3D cliff normal
+              const dHdx = (nMacroNextX - nMacro) * 16 + (nFine - 0.5) * 0.9;
+              const dHdy = (nMacroNextY - nMacro) * 14 + strataWave * 0.45;
+              const invLen = 1 / Math.sqrt(dHdx * dHdx + dHdy * dHdy + 1);
+              const nx = dHdx * invLen;
+              const ny = dHdy * invLen;
+              const nz = invLen;
+
+              const diff = Math.max(0.12, nx * sunX + ny * sunY + nz * sunZ);
+              const ao = Math.min(1, (depthBelowRoad - 22) / 28) * 0.35 + 0.65;
+              const deepFade = Math.max(0.22, 1 - depthBelowRoad / 360);
+              const light = diff * ao * deepFade * (0.85 + nFine * 0.3);
+
+              // Blend warm brown-grey loam near top with cool fractured slate/granite deeper down
+              const rockBlend = Math.min(1, (depthBelowRoad - 24) / 55);
+              const baseR = 116 * (1 - rockBlend) + 104 * rockBlend + strataWave * 10;
+              const baseG = 90 * (1 - rockBlend) + 98 * rockBlend + strataWave * 8;
+              const baseB = 68 * (1 - rockBlend) + 94 * rockBlend + strataWave * 6;
+
+              r = baseR * light;
+              g = baseG * light;
+              b = baseB * light;
+
+              // Moss clinging to upward-facing rock ledges near the upper cliff
+              if (ny < -0.18 && depthBelowRoad < 130) {
+                const mossAmt = Math.min(0.75, (-ny - 0.18) * 2.2 * (1 - depthBelowRoad / 130));
+                r = r * (1 - mossAmt) + 54 * light * 1.3 * mossAmt;
+                g = g * (1 - mossAmt) + 88 * light * 1.3 * mossAmt;
+                b = b * (1 - mossAmt) + 38 * light * 1.3 * mossAmt;
+              }
+            }
+
+            data[idx] = Math.min(255, Math.max(0, r));
+            data[idx + 1] = Math.min(255, Math.max(0, g));
+            data[idx + 2] = Math.min(255, Math.max(0, b));
+            data[idx + 3] = Math.round(edgeAlpha * 255);
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+      });
+
+      const sliceImg = this.scene.add.image(startX + sliceW / 2, minY + sliceH / 2, key);
+      sliceImg.setDepth(DEPTH.TERRAIN_FG);
     }
 
-    // Physics segments (unchanged)
+    // 3. Roadside Timber Posts & Galvanized W-Beam Guardrails on hilly sections
+    this.drawRoadsideGuardrails();
+
+    // 4. Multi-layered botanical grass blades, ferns & wildflowers along the road shoulder
+    this.drawRealisticGrassAndFlora();
+
+    // 5. Physics segments (unchanged)
     for (let i = 0; i < pts.length - 1; i++) {
       const p1 = pts[i];
       const p2 = pts[i + 1];
@@ -287,6 +234,103 @@ export default class Terrain {
     }
   }
 
+  /**
+   * Draws realistic weathered timber posts and galvanized steel guardrails along hilly stretches.
+   */
+  drawRoadsideGuardrails() {
+    const g = this.scene.add.graphics();
+    g.setDepth(DEPTH.TERRAIN_BG - 0.5);
+
+    const sections = [
+      { startX: 520, endX: 1040 },
+      { startX: 1480, endX: 1880 },
+      { startX: 2220, endX: 2520 },
+      { startX: 2800, endX: 3240 },
+    ];
+
+    for (const sec of sections) {
+      const postStep = 48;
+      const postPoints = [];
+      for (let x = sec.startX; x <= sec.endX; x += postStep) {
+        const y = this.getHeightAtX(x);
+        postPoints.push({ x, y });
+
+        // Weathered timber post with 3D light/shadow face
+        g.fillStyle(0x2b1e16, 1);
+        g.fillRect(x - 3, y - 22, 6, 25);
+        g.fillStyle(0x543d2c, 1);
+        g.fillRect(x - 3, y - 22, 2.5, 25);
+
+        // Reflective red/white roadside delineator tab on post
+        g.fillStyle(0xd32f2f, 0.9);
+        g.fillRect(x - 1.5, y - 19, 3, 4);
+      }
+
+      // Corrugated galvanized steel W-beam rail connecting posts
+      for (let i = 0; i < postPoints.length - 1; i++) {
+        const p1 = postPoints[i];
+        const p2 = postPoints[i + 1];
+
+        g.lineStyle(6, 0x5a626a, 1);
+        g.lineBetween(p1.x, p1.y - 13, p2.x, p2.y - 13);
+
+        g.lineStyle(2, 0xb8c0c8, 0.9);
+        g.lineBetween(p1.x, p1.y - 15, p2.x, p2.y - 15);
+
+        g.lineStyle(1.5, 0x2f353b, 0.85);
+        g.lineBetween(p1.x, p1.y - 13, p2.x, p2.y - 13);
+      }
+    }
+  }
+
+  /**
+   * Draws realistic multi-toned grass tufts, seed stalks, and wildflowers along the road verge.
+   */
+  drawRealisticGrassAndFlora() {
+    const pts = this.points;
+    const rng = createRng(901);
+    const g = this.scene.add.graphics();
+    g.setDepth(DEPTH.TERRAIN_FG + 1);
+
+    const finishStart = this.terrainWidth - 350;
+    const rootColors = [0x1e3614, 0x26421a, 0x2f4f21];
+    const tipColors = [0x4c7832, 0x5e8c3e, 0x739e4c, 0x8ca854];
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const isFinishPad = p1.x >= finishStart;
+      const count = isFinishPad ? 2 : 9;
+
+      for (let b = 0; b < count; b++) {
+        const t = (b + rng() * 0.8) / count;
+        const bx = p1.x + (p2.x - p1.x) * t;
+        const by = p1.y + (p2.y - p1.y) * t + 9 + rng() * 4;
+        const bh = 6 + rng() * 13;
+        const lean = (rng() - 0.42) * 8;
+
+        const rCol = rootColors[Math.floor(rng() * rootColors.length)];
+        const tCol = tipColors[Math.floor(rng() * tipColors.length)];
+
+        // Lower shaded stem
+        g.lineStyle(1.6, rCol, 0.9);
+        g.lineBetween(bx, by, bx + lean * 0.45, by - bh * 0.55);
+
+        // Sunlit tapered upper blade
+        g.lineStyle(1.1, tCol, 0.88);
+        g.lineBetween(bx + lean * 0.45, by - bh * 0.55, bx + lean, by - bh);
+
+        // Occasional alpine wildflowers (dandelions, white mountain daisies, purple lupines)
+        if (!isFinishPad && rng() > 0.94) {
+          const fRoll = rng();
+          const fCol = fRoll > 0.6 ? 0xf7d84a : (fRoll > 0.25 ? 0xf2f5f7 : 0x9b7ede);
+          g.fillStyle(fCol, 0.92);
+          g.fillCircle(bx + lean, by - bh - 1, 1.6);
+        }
+      }
+    }
+  }
+
   // Obstacles
   addObstacles() {
     const rockPositions = [1200, 2000, 2600];
@@ -297,80 +341,117 @@ export default class Terrain {
     });
   }
 
+  /**
+   * Renders a photorealistic 3D-shaded granite boulder onto a canvas texture
+   * with directional lighting, granite crystalline speckles, fractures, and moss.
+   */
   drawRock(x, y, r, seed) {
-    const g = this.scene.add.graphics();
+    const pad = 16;
+    const size = Math.ceil((r + pad) * 2);
+    const key = `boulder-ultra-v2-${seed}-${r}`;
 
-    // Soft ambient-occlusion ground shadow
-    g.fillStyle(0x000000, 0.28);
-    g.fillEllipse(x + 4, y + r * 0.5, r * 2.5, r * 0.75);
+    getOrCreateCanvasTexture(this.scene, key, size, size, (ctx, w, h) => {
+      const cx = w / 2;
+      const cy = h / 2;
 
-    // Generate irregular craggy polygon vertices
-    const sides = 10;
-    const verts = [];
-    for (let i = 0; i < sides; i++) {
-      const ang = (i / sides) * Math.PI * 2 - Math.PI / 2;
-      const variation = 0.72 + ((Math.sin(seed * 100 + i * 43) + 1) / 2) * 0.42;
-      verts.push({
-        x: x + Math.cos(ang) * r * variation,
-        y: y + Math.sin(ang) * r * variation * 0.76
-      });
-    }
+      // 1. Soft ambient-occlusion ground shadow
+      const shdGrd = ctx.createRadialGradient(cx + 3, cy + r * 0.52, 2, cx + 3, cy + r * 0.52, r * 1.35);
+      shdGrd.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+      shdGrd.addColorStop(0.6, 'rgba(0, 0, 0, 0.22)');
+      shdGrd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = shdGrd;
+      ctx.save();
+      ctx.translate(cx + 3, cy + r * 0.52);
+      ctx.scale(1.35, 0.42);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
 
-    // Deep shadow base
-    g.fillStyle(COLORS.ROCK_SHADOW, 1);
-    g.beginPath();
-    g.moveTo(verts[0].x + 2, verts[0].y + 2);
-    for (let i = 1; i < verts.length; i++) g.lineTo(verts[i].x + 2, verts[i].y + 2);
-    g.closePath();
-    g.fillPath();
+      // 2. Craggy angular boulder silhouette
+      const sides = 12;
+      const verts = [];
+      for (let i = 0; i < sides; i++) {
+        const ang = (i / sides) * Math.PI * 2 - Math.PI / 2;
+        const variation = 0.78 + ((Math.sin(seed * 97 + i * 41) + 1) / 2) * 0.34;
+        verts.push({
+          x: cx + Math.cos(ang) * r * variation,
+          y: cy + Math.sin(ang) * r * variation * 0.82,
+        });
+      }
 
-    // Main granite/slate body
-    g.fillStyle(COLORS.ROCK_DARK, 1);
-    g.beginPath();
-    g.moveTo(verts[0].x, verts[0].y);
-    for (let i = 1; i < verts.length; i++) g.lineTo(verts[i].x, verts[i].y);
-    g.closePath();
-    g.fillPath();
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (let i = 1; i < verts.length; i++) ctx.lineTo(verts[i].x, verts[i].y);
+      ctx.closePath();
+      ctx.clip();
 
-    // Sunlit upper-left facet
-    g.fillStyle(COLORS.ROCK, 1);
-    g.beginPath();
-    g.moveTo(verts[0].x - 1, verts[0].y - 1);
-    for (let i = 1; i < Math.ceil(verts.length * 0.55); i++) {
-      g.lineTo(verts[i].x - 1, verts[i].y - 1);
-    }
-    g.lineTo(x + r * 0.1, y + r * 0.1);
-    g.closePath();
-    g.fillPath();
+      // 3D directional sphere/facet lighting gradient
+      const rockGrd = ctx.createRadialGradient(
+        cx - r * 0.38,
+        cy - r * 0.38,
+        r * 0.1,
+        cx,
+        cy,
+        r * 1.25
+      );
+      rockGrd.addColorStop(0.0, '#a8b0b8');
+      rockGrd.addColorStop(0.35, '#767e85');
+      rockGrd.addColorStop(0.75, '#495056');
+      rockGrd.addColorStop(1.0, '#272b2f');
+      ctx.fillStyle = rockGrd;
+      ctx.fillRect(0, 0, w, h);
 
-    // Crisp upper-left ridge highlight
-    g.fillStyle(COLORS.ROCK_LIGHT, 0.55);
-    g.beginPath();
-    g.moveTo(verts[0].x, verts[0].y);
-    g.lineTo(verts[1].x, verts[1].y);
-    g.lineTo(verts[2].x, verts[2].y);
-    g.lineTo(x - r * 0.12, y - r * 0.08);
-    g.closePath();
-    g.fillPath();
+      // Sharp planar rock facets
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      ctx.lineTo(verts[1].x, verts[1].y);
+      ctx.lineTo(cx - r * 0.1, cy + r * 0.05);
+      ctx.lineTo(verts[10].x, verts[10].y);
+      ctx.closePath();
+      ctx.fill();
 
-    // Fracture / crack lines
-    g.lineStyle(1.2, COLORS.ROCK_SHADOW, 0.5);
-    g.lineBetween(x - r * 0.35, y - r * 0.05, x + r * 0.18, y + r * 0.25);
-    g.lineBetween(x + r * 0.05, y - r * 0.25, x + r * 0.32, y + r * 0.14);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.24)';
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.1, cy + r * 0.05);
+      ctx.lineTo(verts[3].x, verts[3].y);
+      ctx.lineTo(verts[6].x, verts[6].y);
+      ctx.lineTo(verts[8].x, verts[8].y);
+      ctx.closePath();
+      ctx.fill();
 
-    // Mineral speckles
-    g.fillStyle(0xb0b7bd, 0.35);
-    g.fillCircle(x - r * 0.28, y - r * 0.15, 1.3);
-    g.fillCircle(x + r * 0.1, y - r * 0.22, 1.1);
-    g.fillStyle(0x26292c, 0.35);
-    g.fillCircle(x + r * 0.22, y + r * 0.18, 1.4);
+      // Crystalline granite grain speckles
+      const rng = createRng(seed * 131 + 17);
+      for (let s = 0; s < 65; s++) {
+        const sx = cx + (rng() - 0.5) * r * 1.9;
+        const sy = cy + (rng() - 0.5) * r * 1.6;
+        ctx.fillStyle = rng() > 0.5 ? 'rgba(230,235,240,0.22)' : 'rgba(20,24,28,0.28)';
+        ctx.fillRect(sx, sy, 1.5, 1.5);
+      }
 
-    // Natural moss & lichen clinging to top crevices
-    g.fillStyle(COLORS.MOSS, 0.65);
-    g.fillEllipse(x - r * 0.18, y - r * 0.44, r * 0.42, r * 0.16);
-    g.fillEllipse(x + r * 0.16, y - r * 0.38, r * 0.28, r * 0.13);
+      // Deep fracture crevice
+      ctx.strokeStyle = 'rgba(18, 22, 26, 0.65)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.45, cy - r * 0.1);
+      ctx.lineTo(cx - r * 0.05, cy + r * 0.08);
+      ctx.lineTo(cx + r * 0.35, cy + r * 0.25);
+      ctx.stroke();
 
-    g.setDepth(DEPTH.OBSTACLES);
+      // Velvety green moss on upper crest
+      const mossGrd = ctx.createLinearGradient(0, cy - r, 0, cy - r * 0.2);
+      mossGrd.addColorStop(0, 'rgba(95, 138, 52, 0.85)');
+      mossGrd.addColorStop(1, 'rgba(48, 76, 26, 0.0)');
+      ctx.fillStyle = mossGrd;
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 0.75);
+
+      ctx.restore();
+    });
+
+    const rockImg = this.scene.add.image(x, y, key);
+    rockImg.setDepth(DEPTH.OBSTACLES);
 
     this.scene.matter.add.circle(x, y, r * 0.85, {
       isStatic: true,
@@ -380,7 +461,7 @@ export default class Terrain {
     });
   }
 
-  /* ── Finish Zone — realistic mountain rally checkpoint ── */
+  /* ── Finish Zone — realistic mountain rally stage finish gantry & tarmac ── */
   addFinishZone() {
     const lastPt = this.points[this.points.length - 1];
     const fy = lastPt.y;
@@ -391,33 +472,36 @@ export default class Terrain {
     const g = this.scene.add.graphics();
     g.setDepth(DEPTH.OBSTACLES + 1);
 
-    // Weathered asphalt/concrete finish pad
-    g.fillStyle(0x3a4045, 1);
-    g.fillRect(fxStart, fy - 4, fxEnd - fxStart, 13);
-    g.fillStyle(0x52585e, 0.7);
-    g.fillRect(fxStart, fy - 4, fxEnd - fxStart, 4);
+    // 1. Weathered tarmac rally finish pad with FIA red/white curbs
+    g.fillStyle(0x282c30, 1);
+    g.fillRect(fxStart, fy - 3, fxEnd - fxStart, 14);
+    g.fillStyle(0x3b4147, 0.8);
+    g.fillRect(fxStart, fy - 3, fxEnd - fxStart, 3);
 
-    // Checkered ground strip
-    const stripeW = 25;
-    for (let sx = fxStart; sx < fxEnd; sx += stripeW) {
+    // Tire skid marks on tarmac
+    g.fillStyle(0x141618, 0.45);
+    g.fillRect(fxStart + 20, fy - 2, 190, 2.5);
+
+    // Red & white painted rally curbing
+    const stripeW = 22;
+    for (let sx = fxStart; sx < fxEnd - 24; sx += stripeW) {
       const idx = Math.floor((sx - fxStart) / stripeW);
-      g.fillStyle(idx % 2 === 0 ? 0xe5e7eb : 0x26292c, 0.92);
-      g.fillRect(sx, fy - 6, stripeW, 5);
+      g.fillStyle(idx % 2 === 0 ? 0xe8ecef : 0xc62828, 0.95);
+      g.fillRect(sx, fy - 5, stripeW - 1, 4);
     }
 
-    // End barrier (steel & timber guard wall)
-    g.fillStyle(0x4a5056, 1);
-    g.fillRect(fxEnd - 22, fy - 102, 22, 102);
-    g.fillStyle(0x6b7278, 1);
-    g.fillRect(fxEnd - 20, fy - 100, 6, 98);
-    // Hazard stripes
+    // 2. Concrete Jersey barrier & reflective hazard chevron wall at end
+    g.fillStyle(0x52585e, 1);
+    g.fillRect(fxEnd - 24, fy - 102, 24, 102);
+    g.fillStyle(0x7c848c, 1);
+    g.fillRect(fxEnd - 22, fy - 100, 5, 98);
     for (let sy = fy - 100; sy < fy; sy += 20) {
       const sIdx = Math.floor((sy - (fy - 100)) / 20);
-      g.fillStyle(sIdx % 2 === 0 ? 0xd4a017 : 0x222528, 1);
-      g.fillRect(fxEnd - 22, sy, 22, 10);
+      g.fillStyle(sIdx % 2 === 0 ? 0xe0a816 : 0x1c1f22, 1);
+      g.fillRect(fxEnd - 24, sy, 24, 10);
     }
 
-    // End wall physics
+    // End wall physics (unchanged)
     this.scene.matter.add.rectangle(fxEnd - 10, fy - 50, 20, 100, {
       isStatic: true,
       friction: 0.5,
@@ -425,69 +509,69 @@ export default class Terrain {
       label: 'wall'
     });
 
-    // Metallic flag pole with shading
-    g.fillStyle(0x61676c, 1);
-    g.fillRect(flagX - 3, fy - 140, 6, 140);
-    g.fillStyle(0xb0b7bd, 1);
-    g.fillRect(flagX - 2, fy - 140, 2, 140);
-
-    // Pole finial & concrete base
-    g.fillStyle(0xc9a227, 1);
-    g.fillCircle(flagX, fy - 142, 5.5);
-    g.fillStyle(0x4b5156, 1);
+    // 3. Brushed steel flagpole & shaded waving checkered rally flag
+    g.fillStyle(0x4b5258, 1);
+    g.fillRect(flagX - 3, fy - 144, 6, 144);
+    g.fillStyle(0xc0c7ce, 0.9);
+    g.fillRect(flagX - 2, fy - 144, 2, 144);
+    g.fillStyle(0xd4af37, 1);
+    g.fillCircle(flagX, fy - 146, 5);
+    g.fillStyle(0x373c40, 1);
     g.fillRoundedRect(flagX - 18, fy - 8, 36, 10, 3);
 
-    // Checkered rally flag
-    const flagW = 56;
+    const flagW = 58;
     const flagH = 36;
     const rows = 4;
-    const cols = 5;
+    const cols = 6;
     const cellW = flagW / cols;
     const cellH = flagH / rows;
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
+        const waveY = Math.sin(c * 0.9) * 2.2;
         const isWhite = (r + c) % 2 === 0;
-        g.fillStyle(isWhite ? 0xf1f3f5 : 0xb71c1c, 1);
-        g.fillRect(flagX + 4 + c * cellW, fy - 138 + r * cellH, cellW, cellH);
+        const shade = c % 2 === 1 ? 0.9 : 1.0;
+        const baseColor = isWhite
+          ? Phaser.Display.Color.GetColor(242 * shade, 244 * shade, 246 * shade)
+          : Phaser.Display.Color.GetColor(185 * shade, 28 * shade, 28 * shade);
+        g.fillStyle(baseColor, 1);
+        g.fillRect(flagX + 3 + c * cellW, fy - 140 + r * cellH + waveY, cellW + 0.5, cellH + 0.5);
       }
     }
-    g.lineStyle(1.5, 0x26292c, 0.9);
-    g.strokeRect(flagX + 4, fy - 138, flagW, flagH);
 
-    // Checkpoint pennants
-    this.drawBanner(g, fxStart + 30, fy, 0xc62828);
-    this.drawBanner(g, fxStart + 80, fy, 0xd4a017);
-    this.drawBanner(g, fxEnd - 60, fy, 0x2e7d32);
-    this.drawBanner(g, fxEnd - 110, fy, 0x1565c0);
+    // 4. Rally stage steel truss gantry at finish entrance
+    const archX = fxStart + 18;
+    g.fillStyle(0x3a4046, 1);
+    g.fillRect(archX - 5, fy - 96, 9, 96);
+    g.fillRect(archX + 58, fy - 96, 9, 96);
+    g.fillStyle(0x8c969e, 0.8);
+    g.fillRect(archX - 3, fy - 96, 2.5, 96);
+    g.fillRect(archX + 60, fy - 96, 2.5, 96);
 
-    // Finish sign
-    const finishText = this.scene.add.text(flagX, fy - 158, 'FINISH', {
+    // Overhead gantry banner
+    g.fillStyle(0x1e2226, 1);
+    g.fillRect(archX - 8, fy - 104, 78, 14);
+    for (let ci = 0; ci < 7; ci++) {
+      g.fillStyle(ci % 2 === 0 ? 0xf1f3f5 : 0xc62828, 1);
+      g.fillRect(archX - 5 + ci * 10.2, fy - 101, 9.5, 8);
+    }
+
+    // Stage marker flags
+    this.drawBanner(g, fxStart + 88, fy, COLORS.BUGGY_BODY);
+    this.drawBanner(g, fxEnd - 68, fy, 0xd4a017);
+
+    const finishText = this.scene.add.text(flagX, fy - 158, 'STAGE FINISH', {
       fontFamily: 'Outfit, sans-serif',
-      fontSize: '20px',
+      fontSize: '18px',
       fontStyle: 'bold',
-      color: '#f4f6f8',
-      stroke: '#1e2226',
+      color: '#f8fafc',
+      stroke: '#16191d',
       strokeThickness: 4,
     });
     finishText.setOrigin(0.5, 1);
     finishText.setDepth(DEPTH.OBSTACLES + 2);
 
-    // Checkpoint arch
-    const archX = fxStart + 15;
-    g.fillStyle(0x52585e, 1);
-    g.fillRect(archX - 4, fy - 90, 8, 90);
-    g.fillRect(archX + 56, fy - 90, 8, 90);
-    g.fillStyle(0x9aa1a8, 0.7);
-    g.fillRect(archX - 3, fy - 90, 2, 90);
-    g.fillRect(archX + 57, fy - 90, 2, 90);
-
-    for (let ci = 0; ci < 7; ci++) {
-      g.fillStyle(ci % 2 === 0 ? 0xf1f3f5 : 0x222528, 1);
-      g.fillRect(archX - 6 + ci * 10, fy - 95, 10, 10);
-    }
-
-    // Victory sensor
+    // Victory sensor (unchanged)
     this.finishSensor = this.scene.matter.add.rectangle(flagX, fy - 60, 80, 180, {
       isStatic: true,
       isSensor: true,
@@ -496,12 +580,12 @@ export default class Terrain {
   }
 
   drawBanner(g, x, groundY, color) {
-    g.fillStyle(0x61676c, 1);
-    g.fillRect(x - 2, groundY - 80, 4, 80);
-    g.fillStyle(color, 0.9);
-    g.fillTriangle(x + 2, groundY - 78, x + 2, groundY - 55, x + 22, groundY - 66);
+    g.fillStyle(0x4b5258, 1);
+    g.fillRect(x - 1.5, groundY - 76, 3, 76);
+    g.fillStyle(color, 0.92);
+    g.fillTriangle(x + 1.5, groundY - 74, x + 1.5, groundY - 52, x + 22, groundY - 63);
     g.fillStyle(0xd0d5da, 0.9);
-    g.fillCircle(x, groundY - 82, 2.5);
+    g.fillCircle(x, groundY - 77, 2.2);
   }
 
   /* ── Helpers ── */

@@ -18,53 +18,51 @@ export default class MenuScene extends Phaser.Scene {
 
     drawRealisticSky(this, w, h, 'menu-sky');
 
-    // Distant alpine peaks with snowcaps
+    // Distant 3D-lit alpine peaks with glacier snowcaps
     drawRealisticMountainRange(this, {
       totalW: w + 400,
       baseY: h - 220,
-      amplitude: 175,
+      amplitude: 195,
       scrollFactor: 0,
       depth: DEPTH.MOUNTAINS_FAR,
-      hasSnow: true,
-      snowThreshold: 0.44,
+      layerType: 'far',
       seedOffset: 120,
-      mistAlpha: 0.25,
+      mistAlpha: 0.28,
     });
 
-    // Mid-ground rocky ridge
+    // Mid-ground 3D-lit granite & sub-alpine ridge
     drawRealisticMountainRange(this, {
       totalW: w + 400,
       baseY: h - 140,
-      amplitude: 120,
+      amplitude: 135,
       scrollFactor: 0,
       depth: DEPTH.MOUNTAINS_MID,
-      bodyColor: 0x445f5c,
-      shadowColor: 0x2c4240,
-      hasSnow: false,
+      layerType: 'mid',
       seedOffset: 480,
-      mistAlpha: 0.18,
+      mistAlpha: 0.20,
     });
 
-    // Near foothills & pine forest
-    drawRealisticForest(this, w + 200, h - 70, {
+    // Near wooded foothills & botanical pine/birch forest
+    drawRealisticForest(this, w + 200, h - 75, {
       scrollBack: 0,
       scrollMid: 0,
       scrollFront: 0,
       seed: 19,
+      includeRoadside: false,
     });
 
-    // Volumetric cumulus clouds
+    // Volumetric raymarched cumulus clouds
     const cloudConfigs = [
-      { x: 180, y: 120, scale: 0.9, seed: 11 },
-      { x: 470, y: 85, scale: 1.15, seed: 23 },
-      { x: 810, y: 145, scale: 0.8, seed: 37 },
-      { x: 1080, y: 100, scale: 1.05, seed: 53 },
-      { x: 640, y: 200, scale: 0.65, seed: 71 },
+      { x: 180, y: 115, scale: 0.95, seed: 11 },
+      { x: 480, y: 82, scale: 1.25, seed: 23 },
+      { x: 820, y: 140, scale: 0.85, seed: 37 },
+      { x: 1090, y: 98, scale: 1.10, seed: 53 },
+      { x: 640, y: 195, scale: 0.72, seed: 71 },
     ];
     for (const cfg of cloudConfigs) {
       createRealisticCloud(this, cfg.x, cfg.y, {
         scale: cfg.scale,
-        alpha: 0.9,
+        alpha: 0.92,
         scrollFactor: 0,
         depth: DEPTH.CLOUDS,
         seed: cfg.seed,

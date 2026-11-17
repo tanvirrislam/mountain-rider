@@ -1,33 +1,30 @@
-import Phaser from 'phaser'
-import { PHYSICS, DEPTH, COLORS } from '../utils/constants'
-
+import Phaser from 'phaser';
+import { PHYSICS, DEPTH } from '../utils/constants';
+import { getOrCreateCanvasTexture } from '../utils/scenery';
 
 export default class Buggy {
   constructor(scene, x, y) {
     this.scene = scene;
 
+    const chassisW = 120;
+    const chassisH = 24;
+    const wheelRadius = 22;
+    const wheelOffsetX = 50;
+    const wheelOffsetY = 18;
 
-    const chassisW = 120
-    const chassisH = 24
-    const wheelRadius = 22
-    const wheelOffsetX = 50
-    const wheelOffsetY = 18
-
-    // chassis Physics 
+    // Chassis Physics (unchanged)
     this.chassis = scene.matter.add.rectangle(x, y, chassisW, chassisH, {
       mass: PHYSICS.BUGGY.MASS,
       friction: PHYSICS.BUGGY.FRICTION,
       restitution: PHYSICS.BUGGY.RESTITUTION,
       chamfer: { radius: 10 },
       label: 'chassis',
-      // Lower the center of mass so the buggy naturally rights itself
       plugin: {}
     });
 
-    // Shift center of mass downward for natural stability
     scene.matter.body.setCentre(this.chassis, { x: 0, y: 6 }, true);
 
-    // Physics : Wheels
+    // Wheels Physics (unchanged)
     const wheelOpts = {
       mass: PHYSICS.WHEEL.MASS,
       friction: PHYSICS.WHEEL.FRICTION,
@@ -38,7 +35,7 @@ export default class Buggy {
     this.wheelA = scene.matter.add.circle(x - wheelOffsetX, y + wheelOffsetY, wheelRadius, wheelOpts);
     this.wheelB = scene.matter.add.circle(x + wheelOffsetX, y + wheelOffsetY, wheelRadius, wheelOpts);
 
-    // Physics : Suspension
+    // Suspension Physics (unchanged)
     const stiff = PHYSICS.SUSPENSION.STIFFNESS;
     const damp = PHYSICS.SUSPENSION.DAMPING;
     const len = PHYSICS.SUSPENSION.LENGTH;
@@ -77,232 +74,383 @@ export default class Buggy {
     this.isAccelerating = false;
   }
 
+  /**
+   * Renders a photorealistic 3D-shaded off-road desert/mountain buggy chassis
+   * with automotive metallic paint, carbon-fiber lower trim, cockpit driver,
+   * tubular steel roll cage, rear twin-cam engine, and volumetric headlight beam.
+   */
   createChassisTexture(scene, w, h) {
-    const g = scene.add.graphics();
+    const texW = 240;
+    const texH = 120;
+    const cx = 105; // Chassis physics center X on canvas
+    const cy = 72;  // Chassis physics center Y on canvas
+    const key = 'buggy-chassis-ultra-v2';
 
-    // Undercarriage shadow
-    g.fillStyle(0x000000, 0.28);
-    g.fillRoundedRect(-w / 2 - 4, -h / 2 + 8, w + 8, h + 4, 8);
+    getOrCreateCanvasTexture(scene, key, texW, texH, (ctx) => {
+      ctx.save();
+      ctx.translate(cx, cy);
 
-    // Rear Engine block with cooling fins
-    g.fillStyle(0x2b2f33, 1);
-    g.fillRoundedRect(-w / 2 - 14, -h / 2 - 6, 24, 20, 4);
-    g.fillStyle(0x4b5157, 1);
-    g.fillRoundedRect(-w / 2 - 12, -h / 2 - 4, 20, 16, 2);
-    g.lineStyle(1.5, 0x1c1f22, 0.8);
-    for (let fy = -h / 2 - 1; fy <= -h / 2 + 9; fy += 4) {
-      g.lineBetween(-w / 2 - 11, fy, -w / 2 + 6, fy);
-    }
+      // 1. Soft undercarriage drop shadow
+      const underShd = ctx.createRadialGradient(0, 14, 6, 0, 14, w * 0.62);
+      underShd.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+      underShd.addColorStop(0.7, 'rgba(0, 0, 0, 0.22)');
+      underShd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = underShd;
+      ctx.fillRect(-w / 2 - 18, 2, w + 36, 24);
 
-    // Dual Exhaust pipes with metallic highlight
-    g.fillStyle(0x7d848b, 1);
-    g.fillRoundedRect(-w / 2 - 21, -h / 2 + 1, 13, 6, 2);
-    g.fillStyle(0xc5ccd3, 0.7);
-    g.fillRect(-w / 2 - 20, -h / 2 + 2, 11, 2);
-    g.fillStyle(0x16181a, 1);
-    g.fillCircle(-w / 2 - 19, -h / 2 + 4, 2);
+      // 2. Volumetric warm halogen headlight beam cone projecting right
+      const beamGrd = ctx.createLinearGradient(w / 2, -6, w / 2 + 72, 8);
+      beamGrd.addColorStop(0, 'rgba(255, 248, 210, 0.42)');
+      beamGrd.addColorStop(0.5, 'rgba(255, 244, 190, 0.14)');
+      beamGrd.addColorStop(1, 'rgba(255, 244, 190, 0)');
+      ctx.fillStyle = beamGrd;
+      ctx.beginPath();
+      ctx.moveTo(w / 2 + 2, -h / 2 + 2);
+      ctx.lineTo(w / 2 + 72, -h / 2 - 18);
+      ctx.lineTo(w / 2 + 72, h / 2 + 16);
+      ctx.closePath();
+      ctx.fill();
 
-    // Main Lower Body (metallic multi-tone shading)
-    g.fillStyle(COLORS.BUGGY_BODY_DARK, 1);
-    g.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+      // 3. Rear Exposed Engine Block, Cooling Fins & Heat-Blued Chrome Exhaust
+      const engGrd = ctx.createLinearGradient(-w / 2 - 18, -h / 2 - 10, -w / 2 + 6, h / 2);
+      engGrd.addColorStop(0, '#6e767e');
+      engGrd.addColorStop(0.5, '#3b4046');
+      engGrd.addColorStop(1, '#1c1f22');
+      ctx.fillStyle = engGrd;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 15, -h / 2 - 8, 26, 22, 4);
+      ctx.fill();
 
-    g.fillStyle(COLORS.BUGGY_BODY, 1);
-    g.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h - 5, 6);
+      // Cooling fins & cylinder head detail
+      ctx.strokeStyle = '#141618';
+      ctx.lineWidth = 1.4;
+      for (let fy = -h / 2 - 4; fy <= -h / 2 + 10; fy += 3.5) {
+        ctx.beginPath();
+        ctx.moveTo(-w / 2 - 13, fy);
+        ctx.lineTo(-w / 2 + 6, fy);
+        ctx.stroke();
+      }
 
-    // Upper metallic specular highlight
-    g.fillStyle(COLORS.BUGGY_ACCENT, 0.85);
-    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 3, w - 8, h / 3, 4);
+      // Twin chrome exhaust pipes with heat-bluing tip
+      const exhGrd = ctx.createLinearGradient(-w / 2 - 24, -h / 2, -w / 2 - 8, -h / 2 + 8);
+      exhGrd.addColorStop(0, '#4a628a');
+      exhGrd.addColorStop(0.35, '#c8cfd6');
+      exhGrd.addColorStop(0.75, '#7c848c');
+      exhGrd.addColorStop(1, '#2b2f33');
+      ctx.fillStyle = exhGrd;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 23, -h / 2 + 1, 14, 6.5, 2.5);
+      ctx.fill();
+      ctx.fillStyle = '#111315';
+      ctx.beginPath();
+      ctx.arc(-w / 2 - 21, -h / 2 + 4.2, 2.2, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Subtle panel seam & door line
-    g.lineStyle(1.2, 0x5c0d0d, 0.65);
-    g.lineBetween(-16, -h / 2 + 3, -16, h / 2 - 3);
-    g.lineBetween(36, -h / 2 + 3, 36, h / 2 - 3);
+      // 4. Cockpit Interior, Racing Seat & Driver with Helmet
+      const cabStartX = -15;
+      const cabWidth = 55;
+      const cabHeight = 30;
+      const cabY = -h / 2;
 
-    // Racing stripe
-    g.fillStyle(0xf1f3f5, 0.92);
-    g.fillRect(-w / 2 + 10, -2, w - 20, 5);
-    g.fillStyle(0x1f2326, 0.85);
-    g.fillRect(-w / 2 + 10, 0, w - 20, 1.5);
+      // Dark cockpit interior cavity
+      ctx.fillStyle = '#14171a';
+      ctx.beginPath();
+      ctx.moveTo(cabStartX + 3, cabY);
+      ctx.lineTo(cabStartX + 8, cabY - cabHeight + 3);
+      ctx.lineTo(cabStartX + cabWidth - 16, cabY - cabHeight + 3);
+      ctx.lineTo(cabStartX + cabWidth - 3, cabY);
+      ctx.closePath();
+      ctx.fill();
 
-    // Cockpit
-    const cabStartX = -15;
-    const cabWidth = 55;
-    const cabHeight = 30;
-    const cabY = -h / 2;
+      // Driver racing bucket seat & helmeted silhouette
+      ctx.fillStyle = '#262a2e';
+      ctx.fillRect(cabStartX + 10, cabY - 18, 7, 17);
+      // Driver torso
+      ctx.fillStyle = '#1e242b';
+      ctx.beginPath();
+      ctx.ellipse(cabStartX + 19, cabY - 6, 7, 9, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // White/red racing helmet + dark visor
+      const helmGrd = ctx.createRadialGradient(cabStartX + 19, cabY - 20, 1, cabStartX + 20, cabY - 18, 7);
+      helmGrd.addColorStop(0, '#ffffff');
+      helmGrd.addColorStop(0.7, '#d0d5da');
+      helmGrd.addColorStop(1, '#7a828a');
+      ctx.fillStyle = helmGrd;
+      ctx.beginPath();
+      ctx.arc(cabStartX + 20, cabY - 18, 6.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#11161b';
+      ctx.beginPath();
+      ctx.ellipse(cabStartX + 23.5, cabY - 17.5, 3.2, 2.2, 0.1, 0, Math.PI * 2);
+      ctx.fill();
 
-    g.fillStyle(COLORS.BUGGY_BODY_DARK, 1);
-    g.beginPath();
-    g.moveTo(cabStartX, cabY);
-    g.lineTo(cabStartX + 5, cabY - cabHeight);
-    g.lineTo(cabStartX + cabWidth - 15, cabY - cabHeight);
-    g.lineTo(cabStartX + cabWidth, cabY);
-    g.closePath();
-    g.fillPath();
+      // 5. Tinted Polycarbonate Windshield with Sky Reflection
+      const winGrd = ctx.createLinearGradient(0, cabY - cabHeight, 0, cabY);
+      winGrd.addColorStop(0, 'rgba(165, 212, 245, 0.62)');
+      winGrd.addColorStop(0.45, 'rgba(62, 98, 128, 0.45)');
+      winGrd.addColorStop(1, 'rgba(24, 38, 48, 0.68)');
+      ctx.fillStyle = winGrd;
+      ctx.beginPath();
+      ctx.moveTo(cabStartX + 6, cabY - 1);
+      ctx.lineTo(cabStartX + 10, cabY - cabHeight + 4);
+      ctx.lineTo(cabStartX + cabWidth - 18, cabY - cabHeight + 4);
+      ctx.lineTo(cabStartX + cabWidth - 5, cabY - 1);
+      ctx.closePath();
+      ctx.fill();
 
-    g.fillStyle(COLORS.BUGGY_BODY, 1);
-    g.beginPath();
-    g.moveTo(cabStartX + 2, cabY);
-    g.lineTo(cabStartX + 7, cabY - cabHeight + 2);
-    g.lineTo(cabStartX + cabWidth - 17, cabY - cabHeight + 2);
-    g.lineTo(cabStartX + cabWidth - 2, cabY);
-    g.closePath();
-    g.fillPath();
+      // Windshield specular glare streak
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.34)';
+      ctx.beginPath();
+      ctx.moveTo(cabStartX + cabWidth - 21, cabY - cabHeight + 4);
+      ctx.lineTo(cabStartX + cabWidth - 25, cabY - cabHeight + 4);
+      ctx.lineTo(cabStartX + cabWidth - 11, cabY - 1);
+      ctx.lineTo(cabStartX + cabWidth - 7, cabY - 1);
+      ctx.closePath();
+      ctx.fill();
 
-    // Tinted safety-glass windows
-    g.fillStyle(0x2c4657, 0.85);
-    g.beginPath();
-    g.moveTo(cabStartX + 7, cabY - 2);
-    g.lineTo(cabStartX + 10, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 20, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 7, cabY - 2);
-    g.closePath();
-    g.fillPath();
+      // 6. 3D Chromoly Tubular Roll Cage
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const drawTube = (x1, y1, x2, y2, width = 4.5) => {
+        ctx.strokeStyle = '#16191c';
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
 
-    // Sky reflection on upper glass
-    g.fillStyle(0x9bc4e2, 0.38);
-    g.beginPath();
-    g.moveTo(cabStartX + 10, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 20, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 13, cabY - cabHeight * 0.45);
-    g.lineTo(cabStartX + 8, cabY - cabHeight * 0.45);
-    g.closePath();
-    g.fillPath();
+        ctx.strokeStyle = '#7c858e';
+        ctx.lineWidth = width * 0.32;
+        ctx.beginPath();
+        ctx.moveTo(x1 - 0.5, y1 - 0.8);
+        ctx.lineTo(x2 - 0.5, y2 - 0.8);
+        ctx.stroke();
+      };
 
-    // Window pillar
-    g.lineStyle(4.5, COLORS.BUGGY_BODY_DARK, 1);
-    g.lineBetween(cabStartX + 25, cabY - cabHeight + 5, cabStartX + 25, cabY - 2);
+      // Rear triangulation & roof cage bars
+      drawTube(cabStartX - 28, cabY, cabStartX - 14, cabY - 20, 4);
+      drawTube(cabStartX, cabY, cabStartX - 14, cabY - 20, 4);
+      drawTube(cabStartX - 14, cabY - 20, cabStartX + 6, cabY - cabHeight, 4);
+      drawTube(cabStartX + 3, cabY, cabStartX + 7, cabY - cabHeight, 4.5);
+      drawTube(cabStartX + 25, cabY, cabStartX + 24, cabY - cabHeight, 4);
+      drawTube(cabStartX + cabWidth - 2, cabY, cabStartX + cabWidth - 16, cabY - cabHeight, 4.5);
+      drawTube(cabStartX + 4, cabY - cabHeight, cabStartX + cabWidth - 14, cabY - cabHeight, 5);
 
-    // Diagonal glass glare
-    g.fillStyle(0xffffff, 0.25);
-    g.beginPath();
-    g.moveTo(cabStartX + cabWidth - 22, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 26, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 11, cabY - 2);
-    g.lineTo(cabStartX + cabWidth - 7, cabY - 2);
-    g.closePath();
-    g.fillPath();
+      // 7. Automotive Metallic Clearcoat Main Chassis Body
+      const bodyGrd = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+      bodyGrd.addColorStop(0.0, '#ff6659');  // Sunlit top clearcoat reflection
+      bodyGrd.addColorStop(0.18, '#e53935'); // Bright metallic red
+      bodyGrd.addColorStop(0.55, '#b71c1c'); // Deep crimson core
+      bodyGrd.addColorStop(0.85, '#6e0e0e'); // Lower curve shadow
+      bodyGrd.addColorStop(1.0, '#2b0909');  // Undercarriage ambient occlusion
+      ctx.fillStyle = bodyGrd;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 8);
+      ctx.fill();
 
-    // Tubular Steel Roll Cage
-    g.lineStyle(4, 0x1c1f22, 1);
-    g.lineBetween(cabStartX + 2, cabY - cabHeight - 2, cabStartX + cabWidth - 12, cabY - cabHeight - 2);
-    g.beginPath();
-    g.moveTo(cabStartX, cabY);
-    g.lineTo(cabStartX - 15, cabY - 20);
-    g.lineTo(cabStartX + 5, cabY - cabHeight);
-    g.strokePath();
-    g.beginPath();
-    g.moveTo(cabStartX - 30, cabY);
-    g.lineTo(cabStartX - 15, cabY - 20);
-    g.strokePath();
+      // Brushed aluminum lower skid-plate & rocker panel
+      const skidGrd = ctx.createLinearGradient(-w / 2, h / 2 - 6, w / 2, h / 2);
+      skidGrd.addColorStop(0, '#545b62');
+      skidGrd.addColorStop(0.5, '#9aa2aa');
+      skidGrd.addColorStop(1, '#34393e');
+      ctx.fillStyle = skidGrd;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 + 8, h / 2 - 5, w - 16, 4.5, 2);
+      ctx.fill();
 
-    // Subtle steel highlight on roll cage
-    g.lineStyle(1.2, 0x6b7278, 0.65);
-    g.lineBetween(cabStartX + 3, cabY - cabHeight - 3, cabStartX + cabWidth - 13, cabY - cabHeight - 3);
+      // Crisp metallic racing stripe & panel seams
+      ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
+      ctx.fillRect(-w / 2 + 8, -2.5, w - 16, 4);
+      ctx.fillStyle = 'rgba(24, 26, 29, 0.85)';
+      ctx.fillRect(-w / 2 + 8, -0.5, w - 16, 1.5);
 
-    // Front Bumper / Bullbar
-    g.lineStyle(4, 0x1c1f22, 1);
-    g.beginPath();
-    g.moveTo(w / 2 - 5, 5);
-    g.lineTo(w / 2 + 10, 5);
-    g.lineTo(w / 2 + 15, -5);
-    g.lineTo(w / 2 + 8, -15);
-    g.lineTo(w / 2 - 5, -10);
-    g.strokePath();
+      ctx.strokeStyle = 'rgba(40, 5, 5, 0.65)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-14, -h / 2 + 2);
+      ctx.lineTo(-14, h / 2 - 4);
+      ctx.moveTo(34, -h / 2 + 2);
+      ctx.lineTo(34, h / 2 - 4);
+      ctx.stroke();
 
-    g.lineStyle(2.5, 0x4b5157, 1);
-    g.lineBetween(w / 2 + 10, 5, w / 2 + 15, -5);
+      // 8. Heavy-Duty Tubular Front Bullbar
+      drawTube(w / 2 - 5, 5, w / 2 + 10, 5, 4);
+      drawTube(w / 2 + 10, 5, w / 2 + 15, -5, 4);
+      drawTube(w / 2 + 15, -5, w / 2 + 8, -15, 4);
+      drawTube(w / 2 + 8, -15, w / 2 - 5, -10, 4);
 
-    // Wheel Arch Fenders
-    g.lineStyle(8, 0x141618, 1);
-    g.beginPath();
-    g.arc(-50, 18, 28, Math.PI, 0, false);
-    g.strokePath();
-    g.beginPath();
-    g.arc(50, 18, 28, Math.PI, 0, false);
-    g.strokePath();
+      // 9. Sculpted Mudguard Fenders over Wheel Wells
+      for (const fx of [-50, 50]) {
+        ctx.strokeStyle = '#121417';
+        ctx.lineWidth = 7.5;
+        ctx.beginPath();
+        ctx.arc(fx, 18, 28, Math.PI, 0, false);
+        ctx.stroke();
 
-    g.lineStyle(2.5, COLORS.BUGGY_ACCENT, 0.9);
-    g.beginPath();
-    g.arc(-50, 18, 28, Math.PI, 0, false);
-    g.strokePath();
-    g.beginPath();
-    g.arc(50, 18, 28, Math.PI, 0, false);
-    g.strokePath();
+        ctx.strokeStyle = '#d32f2f';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(fx, 18, 28.5, Math.PI + 0.15, -0.15, false);
+        ctx.stroke();
+      }
 
-    // Headlight with warm reflector lens
-    g.fillStyle(0x2f3337, 1);
-    g.fillRoundedRect(w / 2 - 4, -h / 2 - 4, 10, 12, 3);
-    g.fillStyle(0xfff3b0, 1);
-    g.fillCircle(w / 2 + 2, -h / 2 + 2, 4);
-    g.fillStyle(0xffffff, 0.9);
-    g.fillCircle(w / 2 + 3, -h / 2 + 1.5, 2);
+      // 10. Projector Halogen Headlight & LED Tail Light
+      ctx.fillStyle = '#22262a';
+      ctx.beginPath();
+      ctx.roundRect(w / 2 - 4, -h / 2 - 4, 10, 12, 3);
+      ctx.fill();
 
-    // Tail light
-    g.fillStyle(0x1c1f22, 1);
-    g.fillRoundedRect(-w / 2 - 4, -h / 2 - 2, 6, 12, 2);
-    g.fillStyle(0xc62828, 1);
-    g.fillRoundedRect(-w / 2 - 2, -h / 2, 4, 8, 2);
+      const hlGrd = ctx.createRadialGradient(w / 2 + 3, -h / 2 + 2, 0.5, w / 2 + 2, -h / 2 + 2, 5);
+      hlGrd.addColorStop(0, '#ffffff');
+      hlGrd.addColorStop(0.5, '#fff3a8');
+      hlGrd.addColorStop(1, 'rgba(255, 200, 60, 0)');
+      ctx.fillStyle = hlGrd;
+      ctx.beginPath();
+      ctx.arc(w / 2 + 2.5, -h / 2 + 2, 5, 0, Math.PI * 2);
+      ctx.fill();
 
-    return g;
+      // LED Tail light
+      ctx.fillStyle = '#181a1d';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 4, -h / 2 - 2, 6, 12, 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff1744';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 2.5, -h / 2, 3.5, 8, 1.5);
+      ctx.fill();
+
+      ctx.restore();
+    });
+
+    const sprite = scene.add.image(0, 0, key);
+    // Align origin with physics body center (cx=105, cy=72)
+    sprite.setOrigin(cx / texW, cy / texH);
+    return sprite;
   }
 
+  /**
+   * Renders a photorealistic 3D-shaded off-road mud-terrain tire, drilled steel
+   * brake rotor, red brake caliper, and machined 5-spoke alloy wheel.
+   */
   createWheelTexture(scene, r) {
-    const g = scene.add.graphics();
+    const size = (r + 6) * 2;
+    const key = `buggy-wheel-ultra-v2-${r}`;
 
-    // Knobby off-road tread lugs around outer circumference
-    g.fillStyle(0x111214, 1);
-    const lugs = 14;
-    for (let a = 0; a < lugs; a++) {
-      const ang = (a / lugs) * Math.PI * 2;
-      const lx = Math.cos(ang) * (r - 1);
-      const ly = Math.sin(ang) * (r - 1);
-      g.fillCircle(lx, ly, 3.2);
-    }
+    getOrCreateCanvasTexture(scene, key, size, size, (ctx, w, h) => {
+      const cx = w / 2;
+      const cy = h / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
 
-    // Tire outer rubber
-    g.fillStyle(COLORS.WHEEL_OUTER, 1);
-    g.fillCircle(0, 0, r - 1);
+      // 1. Aggressive mud-terrain outer rubber tread blocks
+      const lugs = 16;
+      for (let i = 0; i < lugs; i++) {
+        const ang = (i / lugs) * Math.PI * 2;
+        ctx.save();
+        ctx.rotate(ang);
+        ctx.fillStyle = i % 2 === 0 ? '#141618' : '#1e2124';
+        ctx.beginPath();
+        ctx.roundRect(r - 4.5, -2.6, 5.2, 5.2, 1.2);
+        ctx.fill();
+        ctx.restore();
+      }
 
-    // Sidewall groove & rubber depth
-    g.lineStyle(2, 0x2a2d30, 0.85);
-    g.strokeCircle(0, 0, r * 0.78);
+      // 2. 3D toroidal rubber tire carcass
+      const tireGrd = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.45, 0, 0, r);
+      tireGrd.addColorStop(0.0, '#3a3f45');
+      tireGrd.addColorStop(0.68, '#222529');
+      tireGrd.addColorStop(0.88, '#141618');
+      tireGrd.addColorStop(1.0, '#0c0d0e');
+      ctx.fillStyle = tireGrd;
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 0.8, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Inner rubber sidewall
-    g.fillStyle(COLORS.WHEEL_INNER, 1);
-    g.fillCircle(0, 0, r * 0.64);
+      // Molded sidewall rib rings
+      ctx.strokeStyle = 'rgba(90, 98, 106, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.77, 0, Math.PI * 2);
+      ctx.stroke();
 
-    // Brake disc visible behind spokes
-    g.fillStyle(0x6c737a, 0.85);
-    g.fillCircle(0, 0, r * 0.48);
+      // Dark wheel well cavity inside rim
+      ctx.fillStyle = '#0f1113';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Alloy rim outer lip
-    g.lineStyle(3, COLORS.WHEEL_RIM, 1);
-    g.strokeCircle(0, 0, r * 0.46);
+      // 3. Drilled Steel Brake Rotor & Red Brake Caliper
+      const rotorGrd = ctx.createLinearGradient(-r * 0.45, -r * 0.45, r * 0.45, r * 0.45);
+      rotorGrd.addColorStop(0, '#9aa2aa');
+      rotorGrd.addColorStop(0.5, '#5c636a');
+      rotorGrd.addColorStop(1, '#828a92');
+      ctx.fillStyle = rotorGrd;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.46, 0, Math.PI * 2);
+      ctx.fill();
 
-    // 5-spoke alloy rim
-    g.lineStyle(3.5, 0xd0d6dc, 0.95);
-    for (let a = 0; a < 5; a++) {
-      const ang = (a / 5) * Math.PI * 2 - Math.PI / 2;
-      g.lineBetween(0, 0, Math.cos(ang) * r * 0.44, Math.sin(ang) * r * 0.44);
-    }
+      // Red performance brake caliper
+      ctx.fillStyle = '#d32f2f';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.48, -0.8, 0.1);
+      ctx.arc(0, 0, r * 0.30, 0.1, -0.8, true);
+      ctx.closePath();
+      ctx.fill();
 
-    // Hub & lug nuts
-    g.fillStyle(COLORS.WHEEL_HUB, 1);
-    g.fillCircle(0, 0, r * 0.2);
+      // 4. Machined 5-Twin-Spoke Metallic Alloy Rim
+      const rimGrd = ctx.createLinearGradient(-r * 0.6, -r * 0.6, r * 0.6, r * 0.6);
+      rimGrd.addColorStop(0.0, '#f1f5f9');
+      rimGrd.addColorStop(0.45, '#949ca4');
+      rimGrd.addColorStop(0.8, '#474d54');
+      rimGrd.addColorStop(1.0, '#cbd2d9');
 
-    g.fillStyle(0xe5e7eb, 0.9);
-    for (let a = 0; a < 5; a++) {
-      const ang = (a / 5) * Math.PI * 2 - Math.PI / 2;
-      g.fillCircle(Math.cos(ang) * r * 0.13, Math.sin(ang) * r * 0.13, 1.1);
-    }
+      // Outer alloy beadlock lip
+      ctx.strokeStyle = rimGrd;
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.58, 0, Math.PI * 2);
+      ctx.stroke();
 
-    // Center axle cap
-    g.fillStyle(0x1a1c1e, 1);
-    g.fillCircle(0, 0, r * 0.07);
+      // 5 machined spokes
+      ctx.lineCap = 'round';
+      for (let s = 0; s < 5; s++) {
+        const ang = (s / 5) * Math.PI * 2 - Math.PI / 2;
+        ctx.strokeStyle = rimGrd;
+        ctx.lineWidth = 3.4;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ang) * r * 0.16, Math.sin(ang) * r * 0.16);
+        ctx.lineTo(Math.cos(ang) * r * 0.56, Math.sin(ang) * r * 0.56);
+        ctx.stroke();
+      }
 
-    return g;
+      // 5. Anodized Red Center Hub & Chrome Lug Nuts
+      ctx.fillStyle = '#b71c1c';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.21, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#e2e8f0';
+      for (let s = 0; s < 5; s++) {
+        const ang = (s / 5) * Math.PI * 2 - Math.PI / 2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang) * r * 0.14, Math.sin(ang) * r * 0.14, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#181b1e';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    });
+
+    return scene.add.image(0, 0, key);
   }
 
+  /**
+   * Draws realistic trailing-arm links, chrome damper shafts, and helical coilover springs.
+   */
   drawSuspensionStruts() {
     const g = this.suspensionGfx;
     g.clear();
@@ -313,27 +461,51 @@ export default class Buggy {
     const cy = this.chassis.position.y;
 
     const mounts = [
-      { localX: -this.wheelOffsetX * 0.75, localY: 2, wheel: this.wheelA },
-      { localX: this.wheelOffsetX * 0.75, localY: 2, wheel: this.wheelB },
+      { localX: -this.wheelOffsetX * 0.76, localY: 1, armX: -18, armY: 8, wheel: this.wheelA },
+      { localX: this.wheelOffsetX * 0.76, localY: 1, armX: 18, armY: 8, wheel: this.wheelB },
     ];
 
     for (const m of mounts) {
       const mx = cx + m.localX * cos - m.localY * sin;
       const my = cy + m.localX * sin + m.localY * cos;
+      const ax = cx + m.armX * cos - m.armY * sin;
+      const ay = cy + m.armX * sin + m.armY * cos;
       const wx = m.wheel.position.x;
       const wy = m.wheel.position.y;
 
-      // Shock absorber damper tube
-      g.lineStyle(4, 0x2d3136, 1);
+      // Heavy-duty steel lower control arm / trailing link
+      g.lineStyle(4.5, 0x22262a, 1);
+      g.lineBetween(ax, ay, wx, wy);
+      g.lineStyle(1.5, 0x5c646c, 0.8);
+      g.lineBetween(ax, ay - 1, wx, wy - 1);
+
+      // Chrome telescopic shock shaft
+      g.lineStyle(3.2, 0xcfd6dc, 1);
       g.lineBetween(mx, my, wx, wy);
-      // Coil spring highlight
-      g.lineStyle(2, 0xc62828, 0.9);
-      g.lineBetween(
-        mx + (wx - mx) * 0.2,
-        my + (wy - my) * 0.2,
-        mx + (wx - mx) * 0.75,
-        my + (wy - my) * 0.75
-      );
+
+      // Upper anodized shock body
+      g.lineStyle(6, 0x2b3036, 1);
+      g.lineBetween(mx, my, mx + (wx - mx) * 0.48, my + (wy - my) * 0.48);
+
+      // Helical red coilover spring windings
+      const dx = wx - mx;
+      const dy = wy - my;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      g.lineStyle(2.2, 0xd32f2f, 0.95);
+      g.beginPath();
+      const coils = 5;
+      for (let c = 0; c <= coils; c++) {
+        const t = 0.18 + (c / coils) * 0.62;
+        const side = (c % 2 === 0 ? 1 : -1) * 3.8;
+        const px = mx + dx * t + nx * side;
+        const py = my + dy * t + ny * side;
+        if (c === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+      }
+      g.strokePath();
     }
   }
 
@@ -388,7 +560,7 @@ export default class Buggy {
     // Upside-down detection
     const deg = Phaser.Math.RadToDeg(this.chassis.angle) % 360;
     const norm = deg < 0 ? deg + 360 : deg;
-    if (norm > 120 && norm < 240) {       // Even wider safe zone
+    if (norm > 120 && norm < 240) {
       this.upsideDownTimer += delta;
     } else {
       this.upsideDownTimer = 0;
@@ -399,7 +571,7 @@ export default class Buggy {
       distance: this.chassis.position.x,
       speed: this.chassis.velocity.x,
       isAccelerating: this.isAccelerating,
-      crashed: this.upsideDownTimer > 3000  // 3 full seconds upside down to crash
+      crashed: this.upsideDownTimer > 3000
     };
   }
 }

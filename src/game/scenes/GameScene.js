@@ -22,11 +22,11 @@ export default class GameScene extends Phaser.Scene {
     this.setGameState = this.registry.get('setGameState');
     this.setStats = this.registry.get('setStats');
 
-    // Background
-    this.createBackground();
-
-    // Terrain
+    // Terrain (created before background so roadside trees can anchor to road height)
     this.terrain = new Terrain(this);
+
+    // Photorealistic Background & Roadside Forest
+    this.createBackground();
 
     // Player
     this.buggy = new Buggy(this, 250, 350);
@@ -38,98 +38,88 @@ export default class GameScene extends Phaser.Scene {
     // Collisions
     this.matter.world.on('collisionstart', this.handleCollisions, this);
 
-    // Clouds array
+    // Volumetric Clouds
     this.clouds = [];
     this.spawnClouds();
 
-    // Dust emitter placeholder
+    // Dust emitter array
     this.dustParticles = [];
   }
-
-  // background
 
   createBackground() {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
-    // Atmospheric sky gradient with solar glow
+    // 1. Atmospheric Rayleigh/Mie sky with solar bloom & crepuscular god rays
     drawRealisticSky(this, w, h, 'sky-grad');
 
-    // Far alpine range with snowcaps & valley mist
+    // 2. Far 3D-lit alpine range with glacier snowcaps & valley mist
     drawRealisticMountainRange(this, {
       totalW: 6000,
-      baseY: 330,
-      amplitude: 185,
+      baseY: 340,
+      amplitude: 205,
       scrollFactor: 0.06,
       depth: DEPTH.MOUNTAINS_FAR,
-      bodyColor: COLORS.MOUNTAIN_FAR,
-      shadowColor: COLORS.MOUNTAIN_FAR_SHADOW,
-      hasSnow: true,
-      snowThreshold: 0.42,
+      layerType: 'far',
       seedOffset: 80,
-      mistAlpha: 0.28,
+      mistAlpha: 0.30,
     });
 
-    // Mid-ground rocky mountain ridge
+    // 3. Mid-ground 3D-lit granite & sub-alpine ridge
     drawRealisticMountainRange(this, {
       totalW: 6000,
-      baseY: 380,
-      amplitude: 145,
+      baseY: 390,
+      amplitude: 155,
       scrollFactor: 0.11,
       depth: DEPTH.MOUNTAINS_MID,
-      bodyColor: COLORS.MOUNTAIN_MID,
-      shadowColor: COLORS.MOUNTAIN_MID_SHADOW,
-      hasSnow: true,
-      snowThreshold: 0.72,
+      layerType: 'mid',
       seedOffset: 520,
       mistAlpha: 0.22,
     });
 
-    // Near wooded foothills
+    // 4. Near forested foothills & rocky outcrops
     drawRealisticMountainRange(this, {
       totalW: 6000,
-      baseY: 420,
-      amplitude: 95,
-      scrollFactor: 0.14,
+      baseY: 430,
+      amplitude: 105,
+      scrollFactor: 0.15,
       depth: DEPTH.MOUNTAINS_NEAR,
-      bodyColor: COLORS.MOUNTAIN_NEAR,
-      shadowColor: COLORS.MOUNTAIN_NEAR_SHADOW,
-      hasSnow: false,
+      layerType: 'near',
       seedOffset: 940,
-      mistAlpha: 0.16,
+      mistAlpha: 0.15,
     });
 
-    // Multi-layered conifer forest & undergrowth
-    drawRealisticForest(this, 6000, 445, {
-      scrollBack: 0.15,
-      scrollMid: 0.18,
-      scrollFront: 0.22,
+    // 5. Multi-layered botanical spruce & birch forest + full-scale roadside trees
+    drawRealisticForest(this, 6000, 448, {
+      scrollBack: 0.16,
+      scrollMid: 0.20,
+      scrollFront: 0.25,
       seed: 42,
+      includeRoadside: true,
+      terrain: this.terrain,
     });
   }
 
-  // clouds
   spawnClouds() {
-    for (let i = 0; i < 9; i++) {
-      const scale = Phaser.Math.FloatBetween(0.55, 1.25);
+    for (let i = 0; i < 8; i++) {
+      const scale = Phaser.Math.FloatBetween(0.65, 1.35);
       const cloud = createRealisticCloud(
         this,
         Phaser.Math.Between(-200, 1400),
-        Phaser.Math.Between(45, 195),
+        Phaser.Math.Between(48, 185),
         {
           scale,
-          alpha: Phaser.Math.FloatBetween(0.75, 0.94),
+          alpha: Phaser.Math.FloatBetween(0.82, 0.96),
           scrollFactor: 0,
           depth: DEPTH.CLOUDS,
           seed: 100 + i * 17,
         }
       );
-      cloud.speedX = Phaser.Math.FloatBetween(0.12, 0.35) * scale;
+      cloud.speedX = Phaser.Math.FloatBetween(0.10, 0.30) * scale;
       this.clouds.push(cloud);
     }
   }
 
-  // dust
   emitDust(x, y) {
     const dustColors = [COLORS.DUST_LIGHT, COLORS.DUST_MID, COLORS.DUST_DARK];
     for (let i = 0; i < 4; i++) {
@@ -140,7 +130,7 @@ export default class GameScene extends Phaser.Scene {
         y + Phaser.Math.Between(-5, 5),
         size,
         color,
-        Phaser.Math.FloatBetween(0.32, 0.58)
+        Phaser.Math.FloatBetween(0.30, 0.55)
       );
       p.setDepth(DEPTH.PARTICLES);
       p.life = 0;
@@ -150,13 +140,13 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Occasional kicked-up gravel speck
-    if (Math.random() > 0.55) {
+    if (Math.random() > 0.52) {
       const speck = this.add.circle(
         x + Phaser.Math.Between(-8, 6),
         y + 2,
         Phaser.Math.FloatBetween(1.2, 2.2),
         COLORS.PEBBLE,
-        0.75
+        0.8
       );
       speck.setDepth(DEPTH.PARTICLES);
       speck.life = 220;
@@ -165,8 +155,6 @@ export default class GameScene extends Phaser.Scene {
       this.dustParticles.push(speck);
     }
   }
-
-  // collision
 
   handleCollisions(event) {
     if (this.isGameOver || this.isVictory) return;
@@ -194,8 +182,6 @@ export default class GameScene extends Phaser.Scene {
     this.scene.pause();
   }
 
-  // update
-
   update(time, delta) {
     if (this.isGameOver || this.isVictory) return;
 
@@ -209,12 +195,11 @@ export default class GameScene extends Phaser.Scene {
     // Move clouds
     for (const c of this.clouds) {
       c.x += c.speedX;
-      if (c.x > 1400) c.x = -200;
+      if (c.x > 1450) c.x = -220;
     }
 
     // Dust
     if (stats.isAccelerating) {
-      // Emit from rear wheel position
       this.emitDust(
         this.buggy.wheelA.position.x,
         this.buggy.wheelA.position.y + 15
@@ -227,10 +212,9 @@ export default class GameScene extends Phaser.Scene {
       p.life += delta;
       p.x += (p.driftX || -0.5);
       p.y -= (p.floatY || 0.5);
-      // Grow slightly as they float
       const scale = 1 + p.life / 1200;
       p.setScale(scale);
-      p.setAlpha(Math.max(0, 0.65 - p.life / 700));
+      p.setAlpha(Math.max(0, 0.62 - p.life / 700));
       if (p.life > 700) {
         p.destroy();
         this.dustParticles.splice(i, 1);
