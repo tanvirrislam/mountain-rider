@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
-import { COLORS } from '../utils/constants';
+import { DEPTH } from '../utils/constants';
+import {
+  drawRealisticSky,
+  drawRealisticMountainRange,
+  drawRealisticForest,
+  createRealisticCloud,
+} from '../utils/scenery';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -10,89 +16,59 @@ export default class MenuScene extends Phaser.Scene {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
-    // Beautiful sky gradient
-    const skyKey = 'menu-sky-' + Date.now();
-    const skyTex = this.textures.createCanvas(skyKey, w, h);
-    if (skyTex) {
-      const ctx = skyTex.getContext();
-      const grd = ctx.createLinearGradient(0, 0, 0, h);
-      grd.addColorStop(0, '#1565c0');
-      grd.addColorStop(0.5, '#42a5f5');
-      grd.addColorStop(1, '#e3f2fd');
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, w, h);
-      skyTex.refresh();
-      this.add.image(w / 2, h / 2, skyKey);
+    drawRealisticSky(this, w, h, 'menu-sky');
+
+    // Distant alpine peaks with snowcaps
+    drawRealisticMountainRange(this, {
+      totalW: w + 400,
+      baseY: h - 220,
+      amplitude: 175,
+      scrollFactor: 0,
+      depth: DEPTH.MOUNTAINS_FAR,
+      hasSnow: true,
+      snowThreshold: 0.44,
+      seedOffset: 120,
+      mistAlpha: 0.25,
+    });
+
+    // Mid-ground rocky ridge
+    drawRealisticMountainRange(this, {
+      totalW: w + 400,
+      baseY: h - 140,
+      amplitude: 120,
+      scrollFactor: 0,
+      depth: DEPTH.MOUNTAINS_MID,
+      bodyColor: 0x445f5c,
+      shadowColor: 0x2c4240,
+      hasSnow: false,
+      seedOffset: 480,
+      mistAlpha: 0.18,
+    });
+
+    // Near foothills & pine forest
+    drawRealisticForest(this, w + 200, h - 70, {
+      scrollBack: 0,
+      scrollMid: 0,
+      scrollFront: 0,
+      seed: 19,
+    });
+
+    // Volumetric cumulus clouds
+    const cloudConfigs = [
+      { x: 180, y: 120, scale: 0.9, seed: 11 },
+      { x: 470, y: 85, scale: 1.15, seed: 23 },
+      { x: 810, y: 145, scale: 0.8, seed: 37 },
+      { x: 1080, y: 100, scale: 1.05, seed: 53 },
+      { x: 640, y: 200, scale: 0.65, seed: 71 },
+    ];
+    for (const cfg of cloudConfigs) {
+      createRealisticCloud(this, cfg.x, cfg.y, {
+        scale: cfg.scale,
+        alpha: 0.9,
+        scrollFactor: 0,
+        depth: DEPTH.CLOUDS,
+        seed: cfg.seed,
+      });
     }
-
-    // Draw far mountain silhouettes
-    const mountains = this.add.graphics();
-    const farPts = [];
-    for (let x = 0; x <= w; x += 10) {
-      const y = h - 120 + Math.sin(x / 150) * 50 + Math.sin(x / 60) * 20;
-      farPts.push({ x, y });
-    }
-    mountains.fillStyle(0x66bb6a, 0.8);
-    mountains.beginPath();
-    mountains.moveTo(0, h);
-    for (const p of farPts) mountains.lineTo(p.x, p.y);
-    mountains.lineTo(w, h);
-    mountains.closePath();
-    mountains.fillPath();
-
-    // Nearer mountains
-    const nearPts = [];
-    for (let x = 0; x <= w; x += 10) {
-      const y = h - 60 + Math.sin(x / 100) * 30 + Math.cos(x / 200) * 25;
-      nearPts.push({ x, y });
-    }
-    mountains.fillStyle(0x43a047, 0.85);
-    mountains.beginPath();
-    mountains.moveTo(0, h);
-    for (const p of nearPts) mountains.lineTo(p.x, p.y);
-    mountains.lineTo(w, h);
-    mountains.closePath();
-    mountains.fillPath();
-    // Shadow on right slopes
-    mountains.fillStyle(0x2e7d32, 0.35);
-    for (let i = 1; i < nearPts.length - 1; i++) {
-      if (nearPts[i].y < nearPts[i-1].y && nearPts[i].y < nearPts[i+1].y) {
-        const end = Math.min(i + 4, nearPts.length - 1);
-        mountains.beginPath();
-        mountains.moveTo(nearPts[i].x, nearPts[i].y);
-        for (let j = i; j <= end; j++) mountains.lineTo(nearPts[j].x, nearPts[j].y);
-        mountains.lineTo(nearPts[end].x, nearPts[i].y + 30);
-        mountains.lineTo(nearPts[i].x, nearPts[i].y + 30);
-        mountains.closePath();
-        mountains.fillPath();
-      }
-    }
-
-    // A few floating clouds
-    for (let i = 0; i < 5; i++) {
-      this.drawMenuCloud(
-        Phaser.Math.Between(100, w - 100),
-        Phaser.Math.Between(80, 250)
-      );
-    }
-  }
-
-  drawMenuCloud(x, y) {
-    const g = this.add.graphics();
-    const s = Phaser.Math.FloatBetween(0.5, 1.2);
-
-    // Shadow
-    g.fillStyle(0x90caf9, 0.6); // slightly darker/blue for menu sky
-    g.fillRoundedRect(x - 40 * s, y - 5 * s, 80 * s, 24 * s, 12 * s);
-    g.fillCircle(x - 20 * s, y - 5 * s, 16 * s);
-    g.fillCircle(x, y - 15 * s, 24 * s);
-    g.fillCircle(x + 20 * s, y - 8 * s, 18 * s);
-
-    // Body
-    g.fillStyle(0xffffff, 0.9);
-    g.fillRoundedRect(x - 42 * s, y - 8 * s, 80 * s, 24 * s, 12 * s);
-    g.fillCircle(x - 22 * s, y - 8 * s, 16 * s);
-    g.fillCircle(x - 2 * s, y - 18 * s, 24 * s);
-    g.fillCircle(x + 18 * s, y - 11 * s, 18 * s);
   }
 }

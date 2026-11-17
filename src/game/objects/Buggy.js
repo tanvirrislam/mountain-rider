@@ -55,6 +55,11 @@ export default class Buggy {
     });
 
     // ── Visuals ──
+    this.suspensionGfx = scene.add.graphics();
+    this.suspensionGfx.setDepth(DEPTH.BUGGY - 1);
+    this.wheelOffsetX = wheelOffsetX;
+    this.wheelOffsetY = wheelOffsetY;
+
     this.chassisSprite = this.createChassisTexture(scene, chassisW, chassisH);
     this.chassisSprite.setDepth(DEPTH.BUGGY);
 
@@ -75,52 +80,62 @@ export default class Buggy {
   createChassisTexture(scene, w, h) {
     const g = scene.add.graphics();
 
-    // Shadow
-    g.fillStyle(0x000000, 0.2);
+    // Undercarriage shadow
+    g.fillStyle(0x000000, 0.28);
     g.fillRoundedRect(-w / 2 - 4, -h / 2 + 8, w + 8, h + 4, 8);
 
-    // Rear Engine 
-    // Engine block
-    g.fillStyle(0x424242, 1);
+    // Rear Engine block with cooling fins
+    g.fillStyle(0x2b2f33, 1);
     g.fillRoundedRect(-w / 2 - 14, -h / 2 - 6, 24, 20, 4);
-    g.fillStyle(0x616161, 1);
+    g.fillStyle(0x4b5157, 1);
     g.fillRoundedRect(-w / 2 - 12, -h / 2 - 4, 20, 16, 2);
+    g.lineStyle(1.5, 0x1c1f22, 0.8);
+    for (let fy = -h / 2 - 1; fy <= -h / 2 + 9; fy += 4) {
+      g.lineBetween(-w / 2 - 11, fy, -w / 2 + 6, fy);
+    }
 
-    // Exhaust pipes
-    g.fillStyle(0x9e9e9e, 1);
-    g.fillRoundedRect(-w / 2 - 20, -h / 2 + 2, 12, 6, 2);
-    g.fillStyle(0x212121, 1);
-    g.fillCircle(-w / 2 - 18, -h / 2 + 5, 2);
+    // Dual Exhaust pipes with metallic highlight
+    g.fillStyle(0x7d848b, 1);
+    g.fillRoundedRect(-w / 2 - 21, -h / 2 + 1, 13, 6, 2);
+    g.fillStyle(0xc5ccd3, 0.7);
+    g.fillRect(-w / 2 - 20, -h / 2 + 2, 11, 2);
+    g.fillStyle(0x16181a, 1);
+    g.fillCircle(-w / 2 - 19, -h / 2 + 4, 2);
 
-    // Main Lower Body
+    // Main Lower Body (metallic multi-tone shading)
     g.fillStyle(COLORS.BUGGY_BODY_DARK, 1);
     g.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
 
-    // layering for the body
     g.fillStyle(COLORS.BUGGY_BODY, 1);
-    g.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h - 4, 6);
+    g.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h - 5, 6);
 
-    g.fillStyle(COLORS.BUGGY_ACCENT, 1);
-    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h / 2.5, 4);
+    // Upper metallic specular highlight
+    g.fillStyle(COLORS.BUGGY_ACCENT, 0.85);
+    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 3, w - 8, h / 3, 4);
+
+    // Subtle panel seam & door line
+    g.lineStyle(1.2, 0x5c0d0d, 0.65);
+    g.lineBetween(-16, -h / 2 + 3, -16, h / 2 - 3);
+    g.lineBetween(36, -h / 2 + 3, 36, h / 2 - 3);
 
     // Racing stripe
-    g.fillStyle(0xffffff, 0.9);
-    g.fillRect(-w / 2 + 10, -2, w - 20, 6);
-    g.fillStyle(0x212121, 0.8);
-    g.fillRect(-w / 2 + 10, 0, w - 20, 2);
+    g.fillStyle(0xf1f3f5, 0.92);
+    g.fillRect(-w / 2 + 10, -2, w - 20, 5);
+    g.fillStyle(0x1f2326, 0.85);
+    g.fillRect(-w / 2 + 10, 0, w - 20, 1.5);
 
     // Cockpit
     const cabStartX = -15;
     const cabWidth = 55;
     const cabHeight = 30;
-    const cabY = -h / 2; // bottom of cab
+    const cabY = -h / 2;
 
     g.fillStyle(COLORS.BUGGY_BODY_DARK, 1);
     g.beginPath();
-    g.moveTo(cabStartX, cabY); // back bottom
-    g.lineTo(cabStartX + 5, cabY - cabHeight); // back top
-    g.lineTo(cabStartX + cabWidth - 15, cabY - cabHeight); // front top
-    g.lineTo(cabStartX + cabWidth, cabY); // front bottom
+    g.moveTo(cabStartX, cabY);
+    g.lineTo(cabStartX + 5, cabY - cabHeight);
+    g.lineTo(cabStartX + cabWidth - 15, cabY - cabHeight);
+    g.lineTo(cabStartX + cabWidth, cabY);
     g.closePath();
     g.fillPath();
 
@@ -133,8 +148,8 @@ export default class Buggy {
     g.closePath();
     g.fillPath();
 
-    // Windows (front and back side windows)
-    g.fillStyle(0x81d4fa, 0.7);
+    // Tinted safety-glass windows
+    g.fillStyle(0x2c4657, 0.85);
     g.beginPath();
     g.moveTo(cabStartX + 7, cabY - 2);
     g.lineTo(cabStartX + 10, cabY - cabHeight + 5);
@@ -143,38 +158,49 @@ export default class Buggy {
     g.closePath();
     g.fillPath();
 
+    // Sky reflection on upper glass
+    g.fillStyle(0x9bc4e2, 0.38);
+    g.beginPath();
+    g.moveTo(cabStartX + 10, cabY - cabHeight + 5);
+    g.lineTo(cabStartX + cabWidth - 20, cabY - cabHeight + 5);
+    g.lineTo(cabStartX + cabWidth - 13, cabY - cabHeight * 0.45);
+    g.lineTo(cabStartX + 8, cabY - cabHeight * 0.45);
+    g.closePath();
+    g.fillPath();
+
     // Window pillar
-    g.lineStyle(5, COLORS.BUGGY_BODY_DARK, 1);
+    g.lineStyle(4.5, COLORS.BUGGY_BODY_DARK, 1);
     g.lineBetween(cabStartX + 25, cabY - cabHeight + 5, cabStartX + 25, cabY - 2);
 
-    // Window shine
-    g.fillStyle(0xffffff, 0.3);
+    // Diagonal glass glare
+    g.fillStyle(0xffffff, 0.25);
     g.beginPath();
     g.moveTo(cabStartX + cabWidth - 22, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 25, cabY - cabHeight + 5);
-    g.lineTo(cabStartX + cabWidth - 10, cabY - 2);
+    g.lineTo(cabStartX + cabWidth - 26, cabY - cabHeight + 5);
+    g.lineTo(cabStartX + cabWidth - 11, cabY - 2);
     g.lineTo(cabStartX + cabWidth - 7, cabY - 2);
     g.closePath();
     g.fillPath();
 
-    // Roll Cage
-    g.lineStyle(4, 0x212121, 1);
-    // Top roof rack
+    // Tubular Steel Roll Cage
+    g.lineStyle(4, 0x1c1f22, 1);
     g.lineBetween(cabStartX + 2, cabY - cabHeight - 2, cabStartX + cabWidth - 12, cabY - cabHeight - 2);
-    // Rear bars
     g.beginPath();
     g.moveTo(cabStartX, cabY);
     g.lineTo(cabStartX - 15, cabY - 20);
     g.lineTo(cabStartX + 5, cabY - cabHeight);
     g.strokePath();
-
     g.beginPath();
     g.moveTo(cabStartX - 30, cabY);
     g.lineTo(cabStartX - 15, cabY - 20);
     g.strokePath();
 
-    // Front Bumper
-    g.lineStyle(4, 0x212121, 1);
+    // Subtle steel highlight on roll cage
+    g.lineStyle(1.2, 0x6b7278, 0.65);
+    g.lineBetween(cabStartX + 3, cabY - cabHeight - 3, cabStartX + cabWidth - 13, cabY - cabHeight - 3);
+
+    // Front Bumper / Bullbar
+    g.lineStyle(4, 0x1c1f22, 1);
     g.beginPath();
     g.moveTo(w / 2 - 5, 5);
     g.lineTo(w / 2 + 10, 5);
@@ -183,12 +209,11 @@ export default class Buggy {
     g.lineTo(w / 2 - 5, -10);
     g.strokePath();
 
-    g.lineStyle(3, 0x424242, 1);
+    g.lineStyle(2.5, 0x4b5157, 1);
     g.lineBetween(w / 2 + 10, 5, w / 2 + 15, -5);
 
-    // Fenders
-    // Background of fenders (dark)
-    g.lineStyle(8, 0x111111, 1);
+    // Wheel Arch Fenders
+    g.lineStyle(8, 0x141618, 1);
     g.beginPath();
     g.arc(-50, 18, 28, Math.PI, 0, false);
     g.strokePath();
@@ -196,8 +221,7 @@ export default class Buggy {
     g.arc(50, 18, 28, Math.PI, 0, false);
     g.strokePath();
 
-    // Accent on fenders
-    g.lineStyle(3, COLORS.BUGGY_ACCENT, 1);
+    g.lineStyle(2.5, COLORS.BUGGY_ACCENT, 0.9);
     g.beginPath();
     g.arc(-50, 18, 28, Math.PI, 0, false);
     g.strokePath();
@@ -205,21 +229,18 @@ export default class Buggy {
     g.arc(50, 18, 28, Math.PI, 0, false);
     g.strokePath();
 
-    // Headlight
-    // Housing
-    g.fillStyle(0x424242, 1);
+    // Headlight with warm reflector lens
+    g.fillStyle(0x2f3337, 1);
     g.fillRoundedRect(w / 2 - 4, -h / 2 - 4, 10, 12, 3);
-    // Light
-    g.fillStyle(0xffea00, 1);
+    g.fillStyle(0xfff3b0, 1);
     g.fillCircle(w / 2 + 2, -h / 2 + 2, 4);
-    // Glow
-    g.fillStyle(0xffffff, 0.8);
-    g.fillCircle(w / 2 + 3, -h / 2 + 2, 2);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(w / 2 + 3, -h / 2 + 1.5, 2);
 
     // Tail light
-    g.fillStyle(0x212121, 1);
+    g.fillStyle(0x1c1f22, 1);
     g.fillRoundedRect(-w / 2 - 4, -h / 2 - 2, 6, 12, 2);
-    g.fillStyle(0xd50000, 1);
+    g.fillStyle(0xc62828, 1);
     g.fillRoundedRect(-w / 2 - 2, -h / 2, 4, 8, 2);
 
     return g;
@@ -228,48 +249,92 @@ export default class Buggy {
   createWheelTexture(scene, r) {
     const g = scene.add.graphics();
 
-    // Tire background
-    g.fillStyle(COLORS.WHEEL_OUTER, 1);
-    g.fillCircle(0, 0, r);
-
-    // Chunky tread pattern
-    g.lineStyle(4, 0x050505, 1);
-    for (let a = 0; a < 8; a++) {
-      const ang = (a / 8) * Math.PI * 2;
-      g.lineBetween(
-        Math.cos(ang) * (r - 6), Math.sin(ang) * (r - 6),
-        Math.cos(ang) * (r + 1), Math.sin(ang) * (r + 1)
-      );
+    // Knobby off-road tread lugs around outer circumference
+    g.fillStyle(0x111214, 1);
+    const lugs = 14;
+    for (let a = 0; a < lugs; a++) {
+      const ang = (a / lugs) * Math.PI * 2;
+      const lx = Math.cos(ang) * (r - 1);
+      const ly = Math.sin(ang) * (r - 1);
+      g.fillCircle(lx, ly, 3.2);
     }
 
-    // Inner rubber
+    // Tire outer rubber
+    g.fillStyle(COLORS.WHEEL_OUTER, 1);
+    g.fillCircle(0, 0, r - 1);
+
+    // Sidewall groove & rubber depth
+    g.lineStyle(2, 0x2a2d30, 0.85);
+    g.strokeCircle(0, 0, r * 0.78);
+
+    // Inner rubber sidewall
     g.fillStyle(COLORS.WHEEL_INNER, 1);
-    g.fillCircle(0, 0, r * 0.65);
+    g.fillCircle(0, 0, r * 0.64);
 
-    // Rim outer
-    g.fillStyle(COLORS.WHEEL_RIM, 1);
-    g.fillCircle(0, 0, r * 0.45);
+    // Brake disc visible behind spokes
+    g.fillStyle(0x6c737a, 0.85);
+    g.fillCircle(0, 0, r * 0.48);
 
-    // Rim inner shadow
-    g.fillStyle(0x757575, 1);
-    g.fillCircle(0, 0, r * 0.35);
+    // Alloy rim outer lip
+    g.lineStyle(3, COLORS.WHEEL_RIM, 1);
+    g.strokeCircle(0, 0, r * 0.46);
 
-    // Hub
+    // 5-spoke alloy rim
+    g.lineStyle(3.5, 0xd0d6dc, 0.95);
+    for (let a = 0; a < 5; a++) {
+      const ang = (a / 5) * Math.PI * 2 - Math.PI / 2;
+      g.lineBetween(0, 0, Math.cos(ang) * r * 0.44, Math.sin(ang) * r * 0.44);
+    }
+
+    // Hub & lug nuts
     g.fillStyle(COLORS.WHEEL_HUB, 1);
     g.fillCircle(0, 0, r * 0.2);
 
-    // Spoke star (5 points)
-    g.lineStyle(3, 0xe0e0e0, 0.8);
+    g.fillStyle(0xe5e7eb, 0.9);
     for (let a = 0; a < 5; a++) {
       const ang = (a / 5) * Math.PI * 2 - Math.PI / 2;
-      g.lineBetween(0, 0, Math.cos(ang) * r * 0.4, Math.sin(ang) * r * 0.4);
+      g.fillCircle(Math.cos(ang) * r * 0.13, Math.sin(ang) * r * 0.13, 1.1);
     }
 
-    // Center bolt
-    g.fillStyle(0x212121, 1);
-    g.fillCircle(0, 0, r * 0.08);
+    // Center axle cap
+    g.fillStyle(0x1a1c1e, 1);
+    g.fillCircle(0, 0, r * 0.07);
 
     return g;
+  }
+
+  drawSuspensionStruts() {
+    const g = this.suspensionGfx;
+    g.clear();
+
+    const cos = Math.cos(this.chassis.angle);
+    const sin = Math.sin(this.chassis.angle);
+    const cx = this.chassis.position.x;
+    const cy = this.chassis.position.y;
+
+    const mounts = [
+      { localX: -this.wheelOffsetX * 0.75, localY: 2, wheel: this.wheelA },
+      { localX: this.wheelOffsetX * 0.75, localY: 2, wheel: this.wheelB },
+    ];
+
+    for (const m of mounts) {
+      const mx = cx + m.localX * cos - m.localY * sin;
+      const my = cy + m.localX * sin + m.localY * cos;
+      const wx = m.wheel.position.x;
+      const wy = m.wheel.position.y;
+
+      // Shock absorber damper tube
+      g.lineStyle(4, 0x2d3136, 1);
+      g.lineBetween(mx, my, wx, wy);
+      // Coil spring highlight
+      g.lineStyle(2, 0xc62828, 0.9);
+      g.lineBetween(
+        mx + (wx - mx) * 0.2,
+        my + (wy - my) * 0.2,
+        mx + (wx - mx) * 0.75,
+        my + (wy - my) * 0.75
+      );
+    }
   }
 
   update(delta) {
@@ -284,6 +349,8 @@ export default class Buggy {
 
     this.wheelBSprite.setPosition(this.wheelB.position.x, this.wheelB.position.y);
     this.wheelBSprite.setRotation(this.wheelB.angle);
+
+    this.drawSuspensionStruts();
 
     const currentAngle = this.chassis.angle;
     const correctionStrength = 0.002;
